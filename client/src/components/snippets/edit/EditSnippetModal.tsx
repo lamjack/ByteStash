@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "prismjs";
-import "prismjs/components/prism-markup-templating.js";
-import "prismjs/themes/prism.css";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "../../../components/common/switch/Switch";

@@ -4,24 +4,38 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
 }
 
-.markdown > * {
-  all: revert;
+.markdown {
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-shadow: none;
 }
 
 .markdown p {
-  margin: revert;
+  margin: 0.75em 0;
+  line-height: 1.75;
 }
 
 .markdown a {
@@ -50,23 +64,50 @@ code {
 
 /* Markdown styles */
 .markdown pre {
-  @apply bg-[#ebebeb] dark:bg-[#2d2d2d];
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
-  @apply text-light-text dark:text-dark-text;
-}
-.markdown code {
-  @apply bg-[#ebebeb] dark:bg-[#2d2d2d];
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
-  @apply text-light-text dark:text-dark-text;
+  @apply border border-light-border bg-[#f6f8fa] text-light-text dark:border-dark-border dark:bg-[#161b22] dark:text-[#e6edf3];
+  margin: 1rem 0;
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.6;
+  text-shadow: none;
+  tab-size: 2;
 }
 
-.markdown pre code {
+.markdown code {
+  @apply bg-[#eff1f3] text-[#1f2328] dark:bg-[#30363d] dark:text-[#e6edf3];
+  padding: 0.15em 0.35em;
+  border-radius: 0.3rem;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+  font-size: 0.875em;
+  font-weight: 500;
+  line-height: inherit;
+  text-shadow: none;
+  font-variant-ligatures: none;
+}
+
+.markdown :not(pre) > code::before,
+.markdown :not(pre) > code::after {
+  content: "";
+}
+
+.markdown pre code,
+.dark .markdown pre code {
   padding: 0;
   background-color: transparent;
   border: none;
+  border-radius: 0;
   box-shadow: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 400;
+  line-height: inherit;
+  text-shadow: none;
 }
 
 /* Light theme scrollbars */
