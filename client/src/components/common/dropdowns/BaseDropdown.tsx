@@ -218,7 +218,7 @@ const BaseDropdown = forwardRef<BaseDropdownRef, BaseDropdownProps>(({
       {isOpen && sections.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-10 w-full mt-1 overflow-auto border rounded-md shadow-lg bg-light-surface dark:bg-dark-surface border-light-border dark:border-dark-border max-h-60"
+          className="absolute z-30 w-full mt-1 overflow-auto border rounded-md shadow-lg bg-light-surface dark:bg-dark-surface border-light-border dark:border-dark-border max-h-60"
           role="listbox"
         >
           {sections.map((section, sectionIndex) => (
