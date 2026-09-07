@@ -16,6 +16,10 @@ import StorageHeader from "../common/StorageHeader";
 import { IconButton } from "../../../common/buttons/IconButton";
 import { ConfirmationModal } from "../../../common/modals/ConfirmationModal";
 import RecycleSnippetContentArea from "./RecycleSnippetContentArea";
+import {
+  EMPTY_SNIPPET_METADATA,
+  type SnippetMetadata,
+} from "../../../../types/metadata";
 
 const RecycleSnippetStorage: React.FC = () => {
   const { t } = useTranslation();
@@ -44,10 +48,9 @@ const RecycleSnippetStorage: React.FC = () => {
   const navigate = useNavigate();
 
   // Metadata - loaded once
-  const [metadata, setMetadata] = useState<{ categories: string[]; languages: string[] }>({
-    categories: [],
-    languages: []
-  });
+  const [metadata, setMetadata] = useState<SnippetMetadata>(
+    EMPTY_SNIPPET_METADATA
+  );
 
   // UI state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -170,8 +173,9 @@ const RecycleSnippetStorage: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen p-8 bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text">
-        <div className="flex items-start justify-between mb-4">
+      <div className="min-h-screen bg-light-bg text-light-text dark:bg-dark-bg dark:text-dark-text">
+        <main id="main-content" className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <StorageHeader isPublicView={false} />
           <UserDropdown />
         </div>
@@ -186,6 +190,7 @@ const RecycleSnippetStorage: React.FC = () => {
           setViewMode={setViewMode}
           openSettingsModal={handleSettingsOpen}
           openNewSnippetModal={handleNewSnippet}
+          hideCategoryDrawer={true}
           hideNewSnippet={true}
           hideRecycleBin={true}
         />
@@ -193,14 +198,14 @@ const RecycleSnippetStorage: React.FC = () => {
         <div className="mb-6 space-y-3">
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-sm font-medium text-light-text-primary dark:text-dark-text-secondary hover:underline"
+            className="flex items-center gap-2 text-sm font-medium text-light-text dark:text-dark-text-secondary hover:underline"
           >
             <ArrowLeftToLine size={18} /> {translate('recycleSnippetStorage.backToSnippets')}
           </button>
 
-          <div className="flex items-center justify-between text-sm text-light-text-primary dark:text-dark-text-secondary">
+          <div className="flex items-center justify-between text-sm text-light-text dark:text-dark-text-secondary">
             <div>
-              <h1 className="text-2xl font-semibold text-light-text-primary dark:text-dark-text-secondary">{translate('recycleSnippetStorage.recycleBin')}</h1>
+              <h1 className="text-2xl font-semibold text-light-text dark:text-dark-text-secondary">{translate('recycleSnippetStorage.recycleBin')}</h1>
               <p className="text-sm">
                 {translate('recycleSnippetStorage.description')}
               </p>
@@ -224,12 +229,12 @@ const RecycleSnippetStorage: React.FC = () => {
           showCodePreview={showCodePreview}
           previewLines={previewLines}
           showCategories={showCategories}
-          expandCategories={expandCategories}
           showLineNumbers={showLineNumbers}
           isAuthenticated={isAuthenticated}
           onCategoryClick={handleCategoryToggle}
           onSnippetsChange={handleSnippetsChange}
         />
+        </main>
       </div>
 
       <SettingsModal

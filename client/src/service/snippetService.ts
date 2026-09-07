@@ -1,6 +1,7 @@
 import { apiClient } from "../utils/api/apiClient";
 import { Snippet } from "../types/snippets";
 import { API_ENDPOINTS } from "../constants/api";
+import type { SnippetMetadata } from "../types/metadata";
 
 export const snippetService = {
   async getAllSnippets(): Promise<Snippet[]> {
@@ -113,11 +114,7 @@ export const snippetService = {
     );
   },
 
-  async getSnippetsMetadata(): Promise<{
-    categories: string[];
-    languages: string[];
-    counts: { total: number };
-  }> {
+  async getSnippetsMetadata(): Promise<SnippetMetadata> {
     return apiClient.get<any>(
       `${API_ENDPOINTS.SNIPPETS}/metadata`,
       { requiresAuth: true }
@@ -152,11 +149,7 @@ export const snippetService = {
     );
   },
 
-  async getPublicSnippetsMetadata(): Promise<{
-    categories: string[];
-    languages: string[];
-    counts: { total: number };
-  }> {
+  async getPublicSnippetsMetadata(): Promise<SnippetMetadata> {
     return apiClient.get<any>(
       `${API_ENDPOINTS.PUBLIC}/metadata`
     );

@@ -15,10 +15,15 @@ import EditSnippetModal from "../../edit/EditSnippetModal";
 import { ShareMenu } from "../../share/ShareMenu";
 import SnippetContentArea from "./SnippetContentArea";
 import StorageHeader from "./StorageHeader";
+import CategoryDrawer from "../../../categories/CategoryDrawer";
+import {
+  EMPTY_SNIPPET_METADATA,
+  type SnippetMetadata,
+} from "../../../../types/metadata";
 
 const BaseSnippetStorage: React.FC = () => {
   const { t: translate } = useTranslation('components/snippets/view/common');
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { addToast } = useToast();
   const { isAuthenticated, logout } = useAuth();
   const {
@@ -39,16 +44,16 @@ const BaseSnippetStorage: React.FC = () => {
   } = useSettings();
 
   // Metadata - loaded once, never changes
-  const [metadata, setMetadata] = useState<{ categories: string[]; languages: string[] }>({
-    categories: [],
-    languages: []
-  });
+  const [metadata, setMetadata] = useState<SnippetMetadata>(
+    EMPTY_SNIPPET_METADATA
+  );
 
   // UI state
   const [isEditSnippetModalOpen, setIsEditSnippetModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [snippetToEdit, setSnippetToEdit] = useState<Snippet | null>(null);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [snippetToShare, setSnippetToShare] = useState<Snippet | null>(null);
 
   const mountedRef = useRef(false);
@@ -117,6 +122,14 @@ const BaseSnippetStorage: React.FC = () => {
       } else {
         next.delete("categories");
       }
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const handleClearCategories = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("categories");
       return next;
     });
   }, [setSearchParams]);
@@ -198,8 +211,9 @@ const BaseSnippetStorage: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen p-8 bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text">
-        <div className="flex items-start justify-between mb-4">
+      <div className="min-h-screen bg-light-bg text-light-text dark:bg-dark-bg dark:text-dark-text">
+        <main id="main-content" className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <StorageHeader isPublicView={false} />
           <UserDropdown />
         </div>
@@ -214,6 +228,7 @@ const BaseSnippetStorage: React.FC = () => {
           setViewMode={setViewMode}
           openSettingsModal={handleSettingsOpen}
           openNewSnippetModal={handleNewSnippet}
+          openCategoryDrawer={() => setIsCategoryDrawerOpen(true)}
           showFavorites={showFavorites}
           handleShowFavorites={handleShowFavorites}
           hideNewSnippet={false}
@@ -229,14 +244,13 @@ const BaseSnippetStorage: React.FC = () => {
           showCodePreview={showCodePreview}
           previewLines={previewLines}
           showCategories={showCategories}
-          expandCategories={expandCategories}
           showLineNumbers={showLineNumbers}
           isAuthenticated={isAuthenticated}
           onCategoryClick={handleCategoryToggle}
-          onSnippetSelect={() => {}}
           onEdit={openEditSnippetModal}
           onShare={openShareMenu}
         />
+        </main>
       </div>
 
       <EditSnippetModal
@@ -264,6 +278,15 @@ const BaseSnippetStorage: React.FC = () => {
         }}
         onSettingsChange={updateSettings}
         isPublicView={false}
+      />
+
+      <CategoryDrawer
+        isOpen={isCategoryDrawerOpen}
+        metadata={metadata}
+        selectedValues={searchParams.get("categories")?.split(",").filter(Boolean) || []}
+        onToggle={handleCategoryToggle}
+        onClear={handleClearCategories}
+        onClose={() => setIsCategoryDrawerOpen(false)}
       />
 
       {snippetToShare && (

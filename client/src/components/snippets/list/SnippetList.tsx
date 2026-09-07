@@ -6,7 +6,6 @@ import { SnippetCard } from "./SnippetCard";
 export interface SnippetListProps {
   snippets: Snippet[];
   viewMode: "grid" | "list";
-  onOpen: (snippet: Snippet) => void;
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onEdit: (snippet: Snippet) => void;
@@ -17,7 +16,6 @@ export interface SnippetListProps {
   showCodePreview: boolean;
   previewLines: number;
   showCategories: boolean;
-  expandCategories: boolean;
   showLineNumbers: boolean;
   isPublicView: boolean;
   isRecycleView: boolean;
@@ -32,7 +30,6 @@ export interface SnippetListProps {
 const SnippetList: React.FC<SnippetListProps> = ({
   snippets,
   viewMode,
-  onOpen,
   onDelete,
   onRestore,
   onEdit,
@@ -43,7 +40,6 @@ const SnippetList: React.FC<SnippetListProps> = ({
   showCodePreview,
   previewLines,
   showCategories,
-  expandCategories,
   showLineNumbers,
   isPublicView,
   isRecycleView,
@@ -66,8 +62,8 @@ const SnippetList: React.FC<SnippetListProps> = ({
     <div
       className={
         viewMode === "grid"
-          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          : "space-y-6"
+          ? "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          : "space-y-4"
       }
     >
       {snippets.map((snippet) => (
@@ -75,7 +71,6 @@ const SnippetList: React.FC<SnippetListProps> = ({
           key={snippet.id}
           snippet={snippet}
           viewMode={viewMode}
-          onOpen={onOpen}
           onDelete={onDelete}
           onRestore={onRestore}
           onEdit={onEdit}
@@ -86,7 +81,6 @@ const SnippetList: React.FC<SnippetListProps> = ({
           showCodePreview={showCodePreview}
           previewLines={previewLines}
           showCategories={showCategories}
-          expandCategories={expandCategories}
           showLineNumbers={showLineNumbers}
           isPublicView={isPublicView}
           isRecycleView={isRecycleView}

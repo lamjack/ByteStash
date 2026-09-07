@@ -18,7 +18,8 @@
     "save": "Guardar",
     "saving": "Guardando...",
     "showPassword": "Mostrar contraseña",
-    "signIn": "Iniciar sesión"
+    "signIn": "Iniciar sesión",
+    "skipToContent": "Saltar al contenido"
   },
   "confirmPassword": "Confirmar contraseña",
   "loading": "Cargando...",

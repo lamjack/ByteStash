@@ -18,6 +18,7 @@
       "snippetUpdated": "Snippet updated successfully"
     }
   },
+  "backToSnippets": "Back to snippets",
   "browsePublicSnippets": "Browse public snippets",
   "filter": {
     "filteredByCategories": "Filtered by categories"

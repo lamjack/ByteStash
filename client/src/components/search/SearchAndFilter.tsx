@@ -7,14 +7,16 @@ import {
   Plus,
   Trash,
   Star,
+  Tags,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SearchBar } from "./SearchBar";
 import { IconButton } from "../common/buttons/IconButton";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import type { SnippetMetadata } from "../../types/metadata";
 
 export interface SearchAndFilterProps {
-  metadata: { categories: string[]; languages: string[] };
+  metadata: SnippetMetadata;
   onSearchChange: (search: string) => void;
   onLanguageChange: (language: string) => void;
   onCategoryToggle: (category: string) => void;
@@ -23,6 +25,8 @@ export interface SearchAndFilterProps {
   setViewMode: (mode: "grid" | "list") => void;
   openSettingsModal: () => void;
   openNewSnippetModal: () => void;
+  openCategoryDrawer?: () => void;
+  hideCategoryDrawer?: boolean;
   hideNewSnippet?: boolean;
   hideRecycleBin?: boolean;
   showFavorites?: boolean;
@@ -40,6 +44,8 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
   setViewMode,
   openSettingsModal,
   openNewSnippetModal,
+  openCategoryDrawer,
+  hideCategoryDrawer = false,
   hideNewSnippet = false,
   hideRecycleBin = false,
   showFavorites,
@@ -47,6 +53,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
 }) => {
   const { t: translate } = useTranslation('components/search');
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const selectedCategories = useMemo(() =>
@@ -77,7 +84,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-6">
+    <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl bg-light-surface/45 p-2 dark:bg-dark-surface/45">
       <SearchBar
         value={currentSearch}
         onChange={onSearchChange}
@@ -86,11 +93,28 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
         selectedCategories={selectedCategories}
       />
 
+      {!hideCategoryDrawer && (
+        <button
+          type="button"
+          onClick={openCategoryDrawer}
+          className="flex h-10 items-center gap-2 rounded-lg border border-light-border bg-light-surface px-3 text-sm font-medium text-light-text transition-colors hover:border-light-primary/50 hover:bg-light-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:border-dark-border dark:bg-dark-surface dark:text-dark-text dark:hover:border-dark-primary/60 dark:hover:bg-dark-hover dark:focus-visible:ring-dark-primary"
+        >
+          <Tags size={18} aria-hidden="true" />
+          <span>{translate("action.browseCategories")}</span>
+          <span className="rounded bg-light-bg px-1.5 py-0.5 text-xs tabular-nums text-light-text-secondary dark:bg-dark-bg dark:text-dark-text-secondary">
+            {selectedCategories.length > 0
+              ? `${selectedCategories.length}/${metadata.facets.length}`
+              : metadata.facets.length}
+          </span>
+        </button>
+      )}
+
       <div className="relative">
         <select
-          className="px-4 py-2 pr-10 rounded-lg appearance-none bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+          className="h-10 appearance-none rounded-lg bg-light-surface px-3 pr-9 text-sm text-light-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:bg-dark-surface dark:text-dark-text dark:focus:ring-dark-primary"
           value={currentLanguage}
           onChange={(e) => onLanguageChange(e.target.value)}
+          aria-label={translate("filter.language.label")}
         >
           <option value="">{translate('filter.language.all')}</option>
           {metadata.languages.map((lang) => (
@@ -107,9 +131,10 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
 
       <div className="relative">
         <select
-          className="px-4 py-2 pr-10 rounded-lg appearance-none bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+          className="h-10 appearance-none rounded-lg bg-light-surface px-3 pr-9 text-sm text-light-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:bg-dark-surface dark:text-dark-text dark:focus:ring-dark-primary"
           value={currentSort}
           onChange={(e) => onSortChange(e.target.value)}
+          aria-label={translate("sort.label")}
         >
           {sortOptions.map((option) => (
             <option key={option.value} value={option.value}>

@@ -1,5 +1,6 @@
 {
   "action": {
+    "browseCategories": "Categorías y etiquetas",
     "clear": "Limpiar búsqueda",
     "newSnippet": "Nuevo fragmento",
     "openSettings": "Abrir ajustes",
@@ -12,14 +13,28 @@
     "title": "Categorías"
   },
   "defaultPlaceholder": "Buscar fragmentos... (Escribe # para ver las categorías)",
+  "drawer": {
+    "categories": "Categorías",
+    "clear": "Borrar selección",
+    "close": "Cerrar categorías y etiquetas",
+    "description": "Explora la taxonomía usada por {{total}} fragmentos.",
+    "noCategories": "No hay categorías coincidentes",
+    "noTags": "No hay etiquetas coincidentes",
+    "search": "Buscar categorías y etiquetas",
+    "selected": "{{count}} seleccionadas",
+    "tags": "Etiquetas",
+    "title": "Categorías y etiquetas"
+  },
   "filter": {
     "language": {
-      "all": "Todos los lenguajes"
+      "all": "Todos los lenguajes",
+      "label": "Filtrar por lenguaje"
     }
   },
   "sort": {
     "alphaAsc": "Alfabéticamente A-Z",
     "alphaDesc": "Alfabéticamente Z-A",
+    "label": "Ordenar fragmentos",
     "newestFirst": "Recientes primero",
     "oldestFirst": "Antiguos primero"
   },

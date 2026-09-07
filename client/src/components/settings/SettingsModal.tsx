@@ -121,9 +121,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     settings.includeCodeInSearch
   );
   const [showCategories, setShowCategories] = useState(settings.showCategories);
-  const [expandCategories, setExpandCategories] = useState(
-    settings.expandCategories
-  );
+  const [expandCategories] = useState(settings.expandCategories);
   const [showLineNumbers, setShowLineNumbers] = useState(
     settings.showLineNumbers
   );
@@ -564,21 +562,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 onChange={setShowCategories}
               />
             </SettingRow>
-
-            {showCategories && (
-              <SettingRow
-                label={translate('settingsModal.block.category.expandCategories.label')}
-                htmlFor="expandCategories"
-                indent
-                description={translate('settingsModal.block.category.expandCategories.description')}
-              >
-                <Switch
-                  id="expandCategories"
-                  checked={expandCategories}
-                  onChange={setExpandCategories}
-                />
-              </SettingRow>
-            )}
           </SettingsGroup>
 
           <SettingsGroup title={translate('settingsModal.block.search.title')}>

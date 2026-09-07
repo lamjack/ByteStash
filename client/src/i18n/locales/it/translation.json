@@ -18,7 +18,8 @@
     "save": "Salva",
     "saving": "Salvataggio in corso...",
     "showPassword": "Mostra password",
-    "signIn": "Accedi"
+    "signIn": "Accedi",
+    "skipToContent": "Vai al contenuto"
   },
   "confirmPassword": "Conferma Password",
   "loading": "Caricamento in corso...",

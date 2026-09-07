@@ -1,5 +1,6 @@
 {
   "action": {
+    "browseCategories": "Categories & tags",
     "clear": "Clear search",
     "newSnippet": "New snippet",
     "openSettings": "Open settings",
@@ -12,14 +13,28 @@
     "title": "Categories"
   },
   "defaultPlaceholder": "Search snippets... (Type # to see all available categories)",
+  "drawer": {
+    "categories": "Categories",
+    "clear": "Clear selection",
+    "close": "Close categories and tags",
+    "description": "Browse the taxonomy used by {{total}} snippets.",
+    "noCategories": "No matching categories",
+    "noTags": "No matching tags",
+    "search": "Search categories and tags",
+    "selected": "{{count}} selected",
+    "tags": "Tags",
+    "title": "Categories & tags"
+  },
   "filter": {
     "language": {
-      "all": "All languages"
+      "all": "All languages",
+      "label": "Filter by language"
     }
   },
   "sort": {
     "alphaAsc": "Alphabetically A-Z",
     "alphaDesc": "Alphabetically Z-A",
+    "label": "Sort snippets",
     "newestFirst": "Newest First",
     "oldestFirst": "Oldest First"
   },

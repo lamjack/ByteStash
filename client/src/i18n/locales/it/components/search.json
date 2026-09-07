@@ -1,5 +1,6 @@
 {
   "action": {
+    "browseCategories": "Categorie e tag",
     "clear": "Cancella ricerca",
     "newSnippet": "Nuovo snippet",
     "openSettings": "Apri impostazioni",
@@ -12,14 +13,28 @@
     "title": "Categorie"
   },
   "defaultPlaceholder": "Ricerca snippet... (Digita # per vedere tutte le categorie disponibili)",
+  "drawer": {
+    "categories": "Categorie",
+    "clear": "Cancella selezione",
+    "close": "Chiudi categorie e tag",
+    "description": "Esplora la tassonomia usata da {{total}} snippet.",
+    "noCategories": "Nessuna categoria corrispondente",
+    "noTags": "Nessun tag corrispondente",
+    "search": "Cerca categorie e tag",
+    "selected": "{{count}} selezionati",
+    "tags": "Tag",
+    "title": "Categorie e tag"
+  },
   "filter": {
     "language": {
-      "all": "Tutti i linguaggi"
+      "all": "Tutti i linguaggi",
+      "label": "Filtra per linguaggio"
     }
   },
   "sort": {
     "alphaAsc": "Alfabeticamente A-Z",
     "alphaDesc": "Alfabeticamente Z-A",
+    "label": "Ordina gli snippet",
     "newestFirst": "Più recenti prima",
     "oldestFirst": "Più vecchie prima"
   },

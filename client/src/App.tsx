@@ -19,6 +19,7 @@ import EmbedView from './components/snippets/embed/EmbedView';
 import RecycleSnippetStorage from './components/snippets/view/recycle/RecycleSnippetStorage';
 import { OIDCLogoutCallback } from './components/auth/oidc/OIDCLogoutCallback';
 import { AdminPage } from './components/admin/AdminPage';
+import { useTranslation } from 'react-i18next';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,11 +75,19 @@ const EmbedViewWrapper: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router basename={window.__BASE_PATH__} future={{ v7_relativeSplatPath: true }}>
         <ThemeProvider>
-          <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text">
+          <a
+            href="#main-content"
+            className="sr-only fixed left-4 top-4 z-[60] rounded-lg bg-light-primary px-4 py-2 font-medium text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-white dark:bg-dark-primary"
+          >
+            {t('action.skipToContent')}
+          </a>
+          <div className="min-h-[100dvh] bg-light-bg text-light-text dark:bg-dark-bg dark:text-dark-text">
             <ToastProvider>
               <AuthProvider>
                 <SettingsProvider>

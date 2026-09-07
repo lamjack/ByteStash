@@ -1,5 +1,6 @@
 {
   "action": {
+    "browseCategories": "カテゴリとタグ",
     "clear": "検索をクリア",
     "newSnippet": "新しいスニペット",
     "openSettings": "設定を開く",
@@ -12,14 +13,28 @@
     "title": "カテゴリ"
   },
   "defaultPlaceholder": "スニペットを検索...（#を入力して利用可能なすべてのカテゴリを表示）",
+  "drawer": {
+    "categories": "カテゴリ",
+    "clear": "選択を解除",
+    "close": "カテゴリとタグを閉じる",
+    "description": "{{total}}件のスニペットで使われている分類を確認できます。",
+    "noCategories": "一致するカテゴリはありません",
+    "noTags": "一致するタグはありません",
+    "search": "カテゴリとタグを検索",
+    "selected": "{{count}}件選択中",
+    "tags": "タグ",
+    "title": "カテゴリとタグ"
+  },
   "filter": {
     "language": {
-      "all": "すべての言語"
+      "all": "すべての言語",
+      "label": "言語で絞り込む"
     }
   },
   "sort": {
     "alphaAsc": "アルファベット順 A-Z",
     "alphaDesc": "アルファベット順 Z-A",
+    "label": "スニペットを並べ替える",
     "newestFirst": "新しい順",
     "oldestFirst": "古い順"
   },

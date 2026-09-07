@@ -9,10 +9,15 @@ import { SearchAndFilter } from "../../../search/SearchAndFilter";
 import { UserDropdown } from "../../../auth/UserDropdown";
 import StorageHeader from "../common/StorageHeader";
 import PublicSnippetContentArea from "./PublicSnippetContentArea";
+import CategoryDrawer from "../../../categories/CategoryDrawer";
+import {
+  EMPTY_SNIPPET_METADATA,
+  type SnippetMetadata,
+} from "../../../../types/metadata";
 
 const PublicSnippetStorage: React.FC = () => {
   // URL-based filter state
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Settings
   const {
@@ -33,13 +38,13 @@ const PublicSnippetStorage: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
   // Metadata - loaded once
-  const [metadata, setMetadata] = useState<{ categories: string[]; languages: string[] }>({
-    categories: [],
-    languages: []
-  });
+  const [metadata, setMetadata] = useState<SnippetMetadata>(
+    EMPTY_SNIPPET_METADATA
+  );
 
   // UI state
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
 
   useEffect(() => {
     initializeMonaco();
@@ -102,6 +107,14 @@ const PublicSnippetStorage: React.FC = () => {
     });
   }, [setSearchParams]);
 
+  const handleClearCategories = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("categories");
+      return next;
+    });
+  }, [setSearchParams]);
+
   const handleSortChange = useCallback((sort: string) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -116,8 +129,9 @@ const PublicSnippetStorage: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen p-8 bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text">
-        <div className="flex items-start justify-between mb-4">
+      <div className="min-h-screen bg-light-bg text-light-text dark:bg-dark-bg dark:text-dark-text">
+        <main id="main-content" className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mb-5 flex items-start justify-between gap-4">
           <StorageHeader isPublicView={true} />
           <UserDropdown />
         </div>
@@ -132,6 +146,7 @@ const PublicSnippetStorage: React.FC = () => {
           setViewMode={setViewMode}
           openSettingsModal={handleSettingsOpen}
           openNewSnippetModal={handleNewSnippet}
+          openCategoryDrawer={() => setIsCategoryDrawerOpen(true)}
           hideNewSnippet={true}
           hideRecycleBin={false}
         />
@@ -143,12 +158,21 @@ const PublicSnippetStorage: React.FC = () => {
           showCodePreview={showCodePreview}
           previewLines={previewLines}
           showCategories={showCategories}
-          expandCategories={expandCategories}
           showLineNumbers={showLineNumbers}
           isAuthenticated={isAuthenticated}
           onCategoryClick={handleCategoryToggle}
         />
+        </main>
       </div>
+
+      <CategoryDrawer
+        isOpen={isCategoryDrawerOpen}
+        metadata={metadata}
+        selectedValues={searchParams.get("categories")?.split(",").filter(Boolean) || []}
+        onToggle={handleCategoryToggle}
+        onClear={handleClearCategories}
+        onClose={() => setIsCategoryDrawerOpen(false)}
+      />
 
       <SettingsModal
         isOpen={isSettingsModalOpen}

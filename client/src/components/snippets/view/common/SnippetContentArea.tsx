@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState, useRef } from "react";
+import React, { useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,6 @@ import {
 } from "../../../../hooks/useSnippetsQuery";
 import { PageContainer } from "../../../common/layout/PageContainer";
 import SnippetList from "../../list/SnippetList";
-import SnippetModal from "../SnippetModal";
 
 interface SnippetContentAreaProps {
   includeCodeInSearch: boolean;
@@ -26,11 +25,9 @@ interface SnippetContentAreaProps {
   showCodePreview: boolean;
   previewLines: number;
   showCategories: boolean;
-  expandCategories: boolean;
   showLineNumbers: boolean;
   isAuthenticated: boolean;
   onCategoryClick: (category: string) => void;
-  onSnippetSelect: (snippet: Snippet | null) => void;
   onEdit: (snippet: Snippet) => void;
   onShare: (snippet: Snippet) => void;
 }
@@ -43,11 +40,9 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
   showCodePreview,
   previewLines,
   showCategories,
-  expandCategories,
   showLineNumbers,
   isAuthenticated,
   onCategoryClick,
-  onSnippetSelect,
   onEdit,
   onShare,
 }) => {
@@ -55,7 +50,6 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { logout } = useAuth();
-  const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const queryFilters: SnippetsQueryKey = useMemo(() => ({
@@ -211,11 +205,6 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
     }
   }, [createSnippetMutation, addToast, logout]);
 
-  const handleSnippetSelect = useCallback((snippet: Snippet | null) => {
-    setSelectedSnippet(snippet);
-    onSnippetSelect(snippet);
-  }, [onSnippetSelect]);
-
   if (isLoading) {
     return (
       <PageContainer>
@@ -263,7 +252,6 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
       <SnippetList
         snippets={snippets}
         viewMode={viewMode}
-        onOpen={handleSnippetSelect}
         onDelete={removeSnippet}
         onRestore={() => Promise.resolve()}
         onEdit={onEdit}
@@ -274,7 +262,6 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
         showCodePreview={showCodePreview}
         previewLines={previewLines}
         showCategories={showCategories}
-        expandCategories={expandCategories}
         showLineNumbers={showLineNumbers}
         isPublicView={false}
         isRecycleView={false}
@@ -288,22 +275,6 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
           {isFetchingNextPage && <Loader2 className="animate-spin" />}
         </div>
       )}
-
-      {
-        selectedSnippet && (
-          <SnippetModal
-            snippet={selectedSnippet}
-            isOpen={!!selectedSnippet}
-            onClose={() => handleSnippetSelect(null)}
-            onDelete={removeSnippet}
-            onEdit={onEdit}
-            onCategoryClick={onCategoryClick}
-            showLineNumbers={showLineNumbers}
-            isPublicView={false}
-            isRecycleView={false}
-          />
-        )
-      }
     </>
   );
 };

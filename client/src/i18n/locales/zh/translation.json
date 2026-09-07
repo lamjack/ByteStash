@@ -18,7 +18,8 @@
     "save": "保存",
     "saving": "保存中...",
     "showPassword": "显示密码",
-    "signIn": "登录"
+    "signIn": "登录",
+    "skipToContent": "跳到主要内容"
   },
   "confirmPassword": "确认密码",
   "loading": "加载中...",

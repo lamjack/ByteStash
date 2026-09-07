@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock } from "lucide-react";
+import { Clock, FolderTree } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import MarkdownRenderer from "../../common/markdown/MarkdownRenderer";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import {
 import { FullCodeBlock } from "../../editor/FullCodeBlock";
 import DownloadButton from "../../common/buttons/DownloadButton";
 import DownloadArchiveButton from "../../common/buttons/DownloadArchiveButton";
+import { partitionSnippetCategories } from "../../../utils/categories/categoryUtils";
 
 interface FullCodeViewProps {
   showTitle?: boolean;
@@ -35,6 +36,7 @@ export const FullCodeView: React.FC<FullCodeViewProps> = ({
   isPublicView = false,
 }) => {
   const { t: translate } = useTranslation('components/snippets/view/all');
+  const taxonomy = partitionSnippetCategories(snippet.categories);
 
   const handleCategoryClick = (e: React.MouseEvent, category: string) => {
     e.preventDefault();
@@ -110,13 +112,30 @@ export const FullCodeView: React.FC<FullCodeViewProps> = ({
           </div>
 
           {/* Categories */}
-          <div className="mt-3">
-            <CategoryList
-              categories={snippet.categories}
-              onCategoryClick={handleCategoryClick}
-              variant="clickable"
-              showAll={true}
-            />
+          <div className="mt-3 space-y-2">
+            {taxonomy.categories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                <FolderTree size={15} aria-hidden="true" />
+                {taxonomy.categories.map((category) => (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={(event) => handleCategoryClick(event, category.value)}
+                    disabled={!onCategoryClick}
+                    className="rounded px-1.5 py-0.5 font-medium transition-colors enabled:hover:bg-light-hover enabled:hover:text-light-text enabled:focus-visible:outline-none enabled:focus-visible:ring-2 enabled:focus-visible:ring-light-primary disabled:cursor-default dark:enabled:hover:bg-dark-hover dark:enabled:hover:text-dark-text dark:enabled:focus-visible:ring-dark-primary"
+                  >
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {taxonomy.tags.length > 0 && (
+              <CategoryList
+                categories={taxonomy.tags.map((tag) => tag.value)}
+                onCategoryClick={handleCategoryClick}
+                variant="clickable"
+              />
+            )}
           </div>
         </div>
 

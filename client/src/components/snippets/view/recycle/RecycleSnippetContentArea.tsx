@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState, useRef } from "react";
+import React, { useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,6 @@ import {
   SnippetsQueryKey,
 } from "../../../../hooks/useSnippetsQuery";
 import SnippetList from "../../list/SnippetList";
-import SnippetModal from "../SnippetModal";
 import { PageContainer } from "../../../common/layout/PageContainer";
 
 interface RecycleSnippetContentAreaProps {
@@ -22,7 +21,6 @@ interface RecycleSnippetContentAreaProps {
   showCodePreview: boolean;
   previewLines: number;
   showCategories: boolean;
-  expandCategories: boolean;
   showLineNumbers: boolean;
   isAuthenticated: boolean;
   onCategoryClick: (category: string) => void;
@@ -36,7 +34,6 @@ const RecycleSnippetContentArea: React.FC<RecycleSnippetContentAreaProps> = ({
   showCodePreview,
   previewLines,
   showCategories,
-  expandCategories,
   showLineNumbers,
   isAuthenticated,
   onCategoryClick,
@@ -47,7 +44,6 @@ const RecycleSnippetContentArea: React.FC<RecycleSnippetContentAreaProps> = ({
   const { addToast } = useToast();
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const queryFilters: SnippetsQueryKey = useMemo(() => ({
@@ -194,7 +190,6 @@ const RecycleSnippetContentArea: React.FC<RecycleSnippetContentAreaProps> = ({
       <SnippetList
         snippets={snippets}
         viewMode={viewMode}
-        onOpen={setSelectedSnippet}
         onDelete={permanentDeleteSnippet}
         onRestore={restoreSnippet}
         onEdit={() => {}}
@@ -205,7 +200,6 @@ const RecycleSnippetContentArea: React.FC<RecycleSnippetContentAreaProps> = ({
         showCodePreview={showCodePreview}
         previewLines={previewLines}
         showCategories={showCategories}
-        expandCategories={expandCategories}
         showLineNumbers={showLineNumbers}
         isPublicView={false}
         isRecycleView={true}
@@ -217,22 +211,6 @@ const RecycleSnippetContentArea: React.FC<RecycleSnippetContentAreaProps> = ({
           {isFetchingNextPage && <Loader2 className="animate-spin" />}
         </div>
       )}
-
-      {
-        selectedSnippet && (
-          <SnippetModal
-            snippet={selectedSnippet}
-            isOpen={!!selectedSnippet}
-            onClose={() => setSelectedSnippet(null)}
-            onDelete={permanentDeleteSnippet}
-            onEdit={() => {}}
-            onCategoryClick={onCategoryClick}
-            showLineNumbers={showLineNumbers}
-            isPublicView={false}
-            isRecycleView={true}
-          />
-        )
-      }
     </>
   );
 };

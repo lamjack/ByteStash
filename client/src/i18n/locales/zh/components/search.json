@@ -1,5 +1,6 @@
 {
   "action": {
+    "browseCategories": "分类与标签",
     "clear": "清空搜索",
     "newSnippet": "新建片段",
     "openSettings": "打开设置",
@@ -12,14 +13,28 @@
     "title": "分类"
   },
   "defaultPlaceholder": "搜索代码片段...（输入 # 查看所有可用分类）",
+  "drawer": {
+    "categories": "分类",
+    "clear": "清除选择",
+    "close": "关闭分类与标签",
+    "description": "浏览 {{total}} 个代码片段使用的分类数据。",
+    "noCategories": "没有符合的分类",
+    "noTags": "没有符合的标签",
+    "search": "搜索分类与标签",
+    "selected": "已选择 {{count}} 个",
+    "tags": "标签",
+    "title": "分类与标签"
+  },
   "filter": {
     "language": {
-      "all": "所有语言"
+      "all": "所有语言",
+      "label": "按语言筛选"
     }
   },
   "sort": {
     "alphaAsc": "按字母升序 A-Z",
     "alphaDesc": "按字母降序 Z-A",
+    "label": "排序代码片段",
     "newestFirst": "最新优先",
     "oldestFirst": "最早优先"
   },

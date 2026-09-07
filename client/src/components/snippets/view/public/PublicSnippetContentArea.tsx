@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useState, useRef } from "react";
+import React, { useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,6 @@ import {
   SnippetsQueryKey,
 } from "../../../../hooks/useSnippetsQuery";
 import SnippetList from "../../list/SnippetList";
-import SnippetModal from "../SnippetModal";
 import { PageContainer } from "../../../common/layout/PageContainer";
 import { ROUTES } from "../../../../constants/routes";
 
@@ -21,7 +20,6 @@ interface PublicSnippetContentAreaProps {
   showCodePreview: boolean;
   previewLines: number;
   showCategories: boolean;
-  expandCategories: boolean;
   showLineNumbers: boolean;
   isAuthenticated: boolean;
   onCategoryClick: (category: string) => void;
@@ -34,7 +32,6 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
   showCodePreview,
   previewLines,
   showCategories,
-  expandCategories,
   showLineNumbers,
   isAuthenticated,
   onCategoryClick,
@@ -43,7 +40,6 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const navigate = useNavigate();
-  const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const queryFilters: SnippetsQueryKey = useMemo(() => ({
@@ -167,7 +163,6 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
       <SnippetList
         snippets={snippets}
         viewMode={viewMode}
-        onOpen={setSelectedSnippet}
         onDelete={() => Promise.resolve()}
         onRestore={() => Promise.resolve()}
         onEdit={() => {}}
@@ -178,7 +173,6 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
         showCodePreview={showCodePreview}
         previewLines={previewLines}
         showCategories={showCategories}
-        expandCategories={expandCategories}
         showLineNumbers={showLineNumbers}
         isPublicView={true}
         isRecycleView={false}
@@ -190,22 +184,6 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
           {isFetchingNextPage && <Loader2 className="animate-spin" />}
         </div>
       )}
-
-      {
-        selectedSnippet && (
-          <SnippetModal
-            snippet={selectedSnippet}
-            isOpen={!!selectedSnippet}
-            onClose={() => setSelectedSnippet(null)}
-            onDelete={() => Promise.resolve()}
-            onEdit={() => {}}
-            onCategoryClick={onCategoryClick}
-            showLineNumbers={showLineNumbers}
-            isPublicView={true}
-            isRecycleView={false}
-          />
-        )
-      }
     </>
   );
 };

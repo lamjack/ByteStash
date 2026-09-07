@@ -7,6 +7,7 @@ import {
   Globe,
   Pin,
   Star,
+  FolderTree,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { formatDistanceToNow } from "date-fns";
@@ -23,11 +24,12 @@ import {
   getFileIcon,
 } from "../../../utils/language/languageUtils";
 import { basePath } from "../../../utils/api/basePath";
+import { partitionSnippetCategories } from "../../../utils/categories/categoryUtils";
+import SnippetCardLink from "./SnippetCardLink";
 
 interface SnippetCardProps {
   snippet: Snippet;
   viewMode: "grid" | "list";
-  onOpen: (snippet: Snippet) => void;
   onDelete: (id: string) => void;
   onRestore: (id: string) => void;
   onEdit: (snippet: Snippet) => void;
@@ -38,7 +40,6 @@ interface SnippetCardProps {
   showCodePreview: boolean;
   previewLines: number;
   showCategories: boolean;
-  expandCategories: boolean;
   showLineNumbers: boolean;
   isPublicView?: boolean;
   isRecycleView?: boolean;
@@ -52,8 +53,6 @@ interface SnippetCardProps {
 
 export const SnippetCard: React.FC<SnippetCardProps> = ({
   snippet,
-  viewMode,
-  onOpen,
   onDelete,
   onRestore,
   onEdit,
@@ -64,7 +63,6 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
   showCodePreview,
   previewLines,
   showCategories,
-  expandCategories,
   showLineNumbers,
   isPublicView = false,
   isRecycleView = false,
@@ -188,23 +186,21 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
   };
 
   const currentFragment = snippet.fragments[currentFragmentIndex];
+  const taxonomy = partitionSnippetCategories(snippet.categories);
 
   return (
     <>
-      <div
-        className={`bg-light-surface dark:bg-dark-surface rounded-lg ${
-          viewMode === "grid" ? "h-full" : "mb-4"
-        }
-          cursor-pointer hover:bg-light-hover dark:hover:bg-dark-hover transition-colors relative group`}
-        onClick={() => {
-          if (!isRecycleView) onOpen(snippet);
-        }}
+      <article
+        className="group relative overflow-hidden rounded-xl bg-light-surface/80 transition duration-200 hover:-translate-y-0.5 hover:bg-light-surface focus-within:bg-light-surface dark:bg-dark-surface/80 dark:hover:bg-dark-surface dark:focus-within:bg-dark-surface"
       >
+        {!isRecycleView && (
+          <SnippetCardLink snippetId={snippet.id} title={snippet.title} />
+        )}
         {(snippet.is_public === 1 ||
           snippet.updated_at ||
           snippet.is_pinned === 1 ||
           snippet.is_favorite === 1) && (
-          <div className="flex items-center justify-between px-3 py-1 text-xs rounded-t-lg bg-light-hover/50 dark:bg-dark-hover/50">
+          <div className="pointer-events-none relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-light-border/70 bg-light-hover/45 px-3 py-1.5 text-xs dark:border-dark-border/70 dark:bg-dark-hover/45">
             <div className="flex items-center gap-2">
               {snippet.is_public === 1 && (
                 <div className="flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded">
@@ -246,14 +242,23 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
           </div>
         )}
 
-        <div className="p-4 pt-2">
+        <div className="pointer-events-none relative z-10 p-4">
           <div className="flex items-start justify-between gap-4 mb-3">
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
+              {showCategories && taxonomy.categories.length > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-light-text-secondary dark:text-dark-text-secondary">
+                  <FolderTree size={14} aria-hidden="true" />
+                  {taxonomy.categories.map((category) => (
+                    <span key={category.value} className="truncate">
+                      {category.label}
+                    </span>
+                  ))}
+                </div>
+              )}
               <h3
                 className={`${
                   compactView ? "text-lg" : "text-xl"
-                } font-bold text-light-text dark:text-dark-text
-                truncate leading-normal mb-2`}
+                } mb-2 line-clamp-2 font-semibold leading-snug tracking-tight text-light-text dark:text-dark-text`}
               >
                 {snippet.title}
               </h3>
@@ -276,7 +281,7 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
                 )}
               </div>
             </div>
-            <div className="transition-opacity opacity-0 group-hover:opacity-100">
+            <div className="pointer-events-auto relative z-20 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
               {!isRecycleView ? (
                 <SnippetCardMenu
                   onEdit={(e: React.MouseEvent) => {
@@ -314,19 +319,8 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
             </div>
           )}
 
-          {showCategories && (
-            <div className="mb-3">
-              <CategoryList
-                categories={snippet.categories}
-                onCategoryClick={handleCategoryClick}
-                variant="clickable"
-                showAll={expandCategories}
-              />
-            </div>
-          )}
-
           {showCodePreview && currentFragment && (
-            <div>
+            <div className="pointer-events-auto relative z-20">
               <div className="flex items-center justify-between px-2 mb-1 text-xs rounded text-light-text-secondary dark:text-dark-text-secondary bg-light-hover/50 dark:bg-dark-hover/50 h-7">
                 <div className="flex items-center flex-1 min-w-0 gap-1">
                   <div className="shrink-0 w-3 h-3 flex items-center justify-center">
@@ -339,7 +333,8 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
                     <>
                       <button
                         onClick={handlePrevFragment}
-                        className="p-0.5 hover:bg-light-hover dark:hover:bg-dark-hover rounded transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-light-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:hover:bg-dark-hover dark:focus-visible:ring-dark-primary"
+                        aria-label={t("pagination.previous")}
                       >
                         <ChevronLeft size={14} />
                       </button>
@@ -348,7 +343,8 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
                       </span>
                       <button
                         onClick={handleNextFragment}
-                        className="p-0.5 hover:bg-light-hover dark:hover:bg-dark-hover rounded transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-light-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:hover:bg-dark-hover dark:focus-visible:ring-dark-primary"
+                        aria-label={t("pagination.next")}
                       >
                         <ChevronRight size={14} />
                       </button>
@@ -371,8 +367,18 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
               />
             </div>
           )}
+
+          {showCategories && taxonomy.tags.length > 0 && (
+            <div className="pointer-events-auto relative z-20 mt-3 border-t border-light-border/70 pt-3 dark:border-dark-border/70">
+              <CategoryList
+                categories={taxonomy.tags.map((tag) => tag.value)}
+                onCategoryClick={handleCategoryClick}
+                variant="clickable"
+              />
+            </div>
+          )}
         </div>
-      </div>
+      </article>
 
       <ConfirmationModal
         isOpen={isDeleteModalOpen}

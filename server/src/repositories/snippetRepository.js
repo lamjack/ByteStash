@@ -1,5 +1,6 @@
 import { getDb } from "../config/database.js";
 import Logger from "../logger.js";
+import { getCategoryFacets } from "./snippetMetadata.js";
 
 class SnippetRepository {
   constructor() {
@@ -601,23 +602,8 @@ class SnippetRepository {
 
     try {
       // Get unique categories
-      let categorySql = `
-        SELECT DISTINCT c.name
-        FROM categories c
-        INNER JOIN snippets s ON c.snippet_id = s.id
-        WHERE s.expiry_date IS NULL
-      `;
-      const categoryParams = [];
-
-      if (userId !== null) {
-        categorySql += ` AND s.user_id = ?`;
-        categoryParams.push(userId);
-      } else {
-        categorySql += ` AND s.is_public = 1`;
-      }
-      categorySql += ` ORDER BY c.name`;
-
-      const categories = db.prepare(categorySql).all(...categoryParams).map(r => r.name);
+      const facets = getCategoryFacets(db, userId);
+      const categories = facets.map((facet) => facet.value);
 
       // Get unique languages
       let languageSql = `
@@ -651,7 +637,7 @@ class SnippetRepository {
 
       const total = db.prepare(countSql).get(...countParams).count;
 
-      return { categories, languages, counts: { total } };
+      return { categories, languages, counts: { total }, facets };
     } catch (error) {
       Logger.error("Error in getMetadata:", error);
       throw error;

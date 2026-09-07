@@ -14,7 +14,7 @@ export const PageContainer: React.FC<PageContainerProps> = ({
   actions
 }) => {
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text p-8">
+    <div className="min-h-[100dvh] bg-light-bg px-4 py-5 text-light-text dark:bg-dark-bg dark:text-dark-text sm:px-6 lg:px-8">
       <div className={`max-w-7xl mx-auto ${className}`}>
         {(title || actions) && (
           <div className="flex justify-between items-center mb-6">
