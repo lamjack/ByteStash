@@ -5,7 +5,7 @@ services:
       target: client
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       # Backend API target: Points to the ExpressJS container running the REST APIs
       - BACKEND_API_TARGET=http://server:5000
@@ -18,7 +18,7 @@ services:
       target: server
       dockerfile: Dockerfile.dev
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5050:5000"
     environment:
       # e.g. write /bytestash for a domain such as my.domain/bytestash, leave blank in every other case
       - BASE_PATH=
@@ -27,7 +27,7 @@ services:
       - ALLOWED_HOSTS=
       # Either provide JWT_SECRET directly or use JWT_SECRET_FILE for Docker secrets
       #- JWT_SECRET_FILE=/run/secrets/jwt
-      - JWT_SECRET=your-secret
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env}
       # how long the token lasts, examples: "2 days", "10h", "7d", "1m", "60s"
       - TOKEN_EXPIRY=24h
       # is this bytestash instance open to new accounts being created?
@@ -42,7 +42,7 @@ services:
       - ALLOW_PASSWORD_CHANGES=true
 
       # Optional: Enable OIDC for Single Sign On
-      - OIDC_ENABLED=true
+      - OIDC_ENABLED=false
       # Optional: Display name for users signing in with SSO, will default to Single Sign-on
       - OIDC_DISPLAY_NAME=
       # Your OIDC issuer url, e.g. https://authentik.mydomain.com/application/o/bytestash/ for authentik

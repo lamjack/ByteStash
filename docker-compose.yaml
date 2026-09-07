@@ -1,12 +1,13 @@
 services:
   server:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       # Serves the web UI, the REST API (/api), and the remote MCP endpoint (/mcp)
       # for AI assistants — all on the same port, authenticated with a ByteStash API key.
-      - "5000:5000"
+      - "127.0.0.1:5050:5000"
     environment:
       # e.g. write /bytestash for a domain such as my.domain/bytestash, leave blank in every other case
       - BASE_PATH=
@@ -15,7 +16,7 @@ services:
       - ALLOWED_HOSTS=
       # Either provide JWT_SECRET directly or use JWT_SECRET_FILE for Docker secrets
       #- JWT_SECRET_FILE=/run/secrets/jwt
-      - JWT_SECRET=your-secret
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env}
       # how long the token lasts, examples: "2 days", "10h", "7d", "1m", "60s"
       - TOKEN_EXPIRY=24h
       # is this bytestash instance open to new accounts being created?
@@ -30,7 +31,7 @@ services:
       - ALLOW_PASSWORD_CHANGES=true
 
       # Optional: Enable OIDC for Single Sign On
-      - OIDC_ENABLED=true
+      - OIDC_ENABLED=false
       # Optional: Display name for users signing in with SSO, will default to Single Sign-on
       - OIDC_DISPLAY_NAME=
       # Your OIDC issuer url, e.g. https://authentik.mydomain.com/application/o/bytestash/ for authentik
@@ -44,6 +45,12 @@ services:
       # Optional: Comma-separated list of usernames that should have admin privileges
       # e.g. "admin,jordan" - these users will have access to the admin panel
       - ADMIN_USERNAMES=admin
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/auth/config').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     volumes:
       - ./data:/data/snippets
 # Uncomment to use docker secrets

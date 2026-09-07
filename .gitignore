@@ -10,3 +10,5 @@ example-fragment.js
 
 ci/certs/
 ci/secrets/
+.env
+__pycache__/
