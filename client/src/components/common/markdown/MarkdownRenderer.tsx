@@ -3,9 +3,10 @@ import ReactMarkdown from 'react-markdown';
 import Admonition from '../../utils/Admonition';
 import { flattenToText } from '../../../utils/markdownUtils';
 import MermaidViewer from './MermaidViewer';
+import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 
-const REMARK_PLUGINS = [remarkGfm];
+const REMARK_PLUGINS = [remarkGfm, remarkBreaks];
 
 export interface MarkdownRendererProps {
     children: string;
@@ -19,6 +20,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ children, cl
             className={className}
             remarkPlugins={REMARK_PLUGINS}
             components={{
+                th: ({ node, className, ...props }: any) => (
+                    <th
+                        className={`bg-light-hover text-light-text dark:bg-dark-hover dark:text-dark-text ${className || ''}`}
+                        {...props}
+                    />
+                ),
                 blockquote: ({ children }) => {
                     const text = flattenToText(children).trim();
                     const match = text.match(
