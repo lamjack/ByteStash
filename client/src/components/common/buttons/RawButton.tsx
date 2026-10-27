@@ -12,6 +12,7 @@ export interface RawButtonProps {
 const RawButton: React.FC<RawButtonProps> = ({ isPublicView, snippetId, fragmentId }) => {
   const { t: translate } = useTranslation('components/common/buttons');
   const [isOpenRaw, setIsOpenRaw] = useState(false);
+  const title = translate('rawButton.title');
 
   const handleOpenRaw = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -31,10 +32,11 @@ const RawButton: React.FC<RawButtonProps> = ({ isPublicView, snippetId, fragment
 
   return (
     <button
+      type="button"
       onClick={handleOpenRaw}
-      className="p-1 bg-light-surface dark:bg-dark-surface rounded-md 
-        hover:bg-light-hover dark:hover:bg-dark-hover transition-colors text-light-text dark:text-dark-text"
-      title={translate('rawButton.title')}
+      className="flex h-9 w-9 items-center justify-center rounded-md bg-light-surface dark:bg-dark-surface hover:bg-light-hover dark:hover:bg-dark-hover transition-colors text-light-text dark:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:focus-visible:ring-dark-primary"
+      aria-label={title}
+      title={title}
     >
       {isOpenRaw ? (
         <Check size={16} className="text-light-primary dark:text-dark-primary" />

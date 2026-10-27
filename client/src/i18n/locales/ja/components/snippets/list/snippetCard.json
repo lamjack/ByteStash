@@ -30,6 +30,8 @@
   },
   "defaultDescription": "説明なし",
   "defaultUpdateTime": "不明",
+  "fileCount_one": "{{count}} ファイル",
+  "fileCount_other": "{{count}} ファイル",
   "favorite": "お気に入り",
   "pinned": "固定",
   "public": "公開",

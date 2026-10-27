@@ -30,6 +30,8 @@
   },
   "defaultDescription": "暂无描述",
   "defaultUpdateTime": "未知",
+  "fileCount_one": "{{count}} 个文件",
+  "fileCount_other": "{{count}} 个文件",
   "favorite": "已收藏",
   "pinned": "已置顶",
   "public": "公开",

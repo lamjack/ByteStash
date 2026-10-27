@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { X, Maximize2, Minimize2, Trash2, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { IconButton } from "../buttons/IconButton";
+
+const FOCUSABLE_SELECTOR =
+  'input, textarea, select, button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -9,6 +12,7 @@ export interface ModalProps {
   title?: React.ReactNode;
   children: React.ReactNode;
   width?: string;
+  fullHeight?: boolean;
   expandable?: boolean;
   defaultExpanded?: boolean;
   onEdit?: () => void;
@@ -22,6 +26,7 @@ const Modal: React.FC<ModalProps> = ({
   title,
   children,
   width = "max-w-3xl",
+  fullHeight = false,
   expandable = false,
   defaultExpanded = false,
   onEdit,
@@ -29,6 +34,7 @@ const Modal: React.FC<ModalProps> = ({
   contentRef,
 }) => {
   const { t } = useTranslation();
+  const titleId = useId();
 
   const [isExpanded, setIsExpanded] = useState(() => {
     if (expandable) {
@@ -45,9 +51,24 @@ const Modal: React.FC<ModalProps> = ({
   }, [isExpanded, expandable]);
 
   const modalRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
-  // Handle outside click + escape
   useEffect(() => {
+    if (!isOpen) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    restoreFocusRef.current = previousFocus;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const frame = requestAnimationFrame(() => {
+      modalRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+    });
+
     const handleClickOutside = (event: MouseEvent) => {
       const isBackdropClick = (event.target as HTMLElement).classList.contains(
         "modal-backdrop"
@@ -58,43 +79,70 @@ const Modal: React.FC<ModalProps> = ({
     };
 
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
-        onClose();
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const panel = modalRef.current;
+      if (!panel) return;
+      const focusableElements = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((element) => !element.hasAttribute("disabled") && element.tabIndex >= 0);
+      if (focusableElements.length === 0) return;
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !panel.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !panel.contains(active))) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleEscapeKey);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscapeKey);
 
     return () => {
-      document.body.style.overflow = "unset";
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscapeKey);
+      if (restoreFocusRef.current?.isConnected) {
+        restoreFocusRef.current.focus();
+      }
+      restoreFocusRef.current = null;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const modalWidth = isExpanded ? "max-w-[90vw]" : width;
+  const modalHeight = fullHeight ? "h-[88vh] max-h-[88vh]" : "max-h-[80vh]";
+
+  if (!isOpen) return null;
 
   return (
     <div
-      className={`modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 transition-opacity duration-300
-        ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+      className="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 opacity-100 transition-opacity duration-300"
     >
       <div
         ref={modalRef}
-        className={`bg-light-surface dark:bg-dark-surface rounded-lg w-full ${modalWidth} max-h-[80vh] flex flex-col
-          transition-all duration-300 ease-in-out transform
-          ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className={`bg-light-surface dark:bg-dark-surface rounded-lg w-full ${modalWidth} ${modalHeight} flex flex-col opacity-100 scale-100
+          transition-all duration-300 ease-in-out transform`}
         style={{
           willChange: "transform, opacity, width",
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-4 border-b border-light-border dark:border-dark-border">
-          <div className="flex-1 text-lg font-semibold text-light-text dark:text-dark-text">
+          <div id={titleId} className="flex-1 text-lg font-semibold text-light-text dark:text-dark-text">
             {title}
           </div>
           <div className="flex items-center gap-2">
