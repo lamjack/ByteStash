@@ -109,9 +109,9 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
         </button>
       )}
 
-      <div className="relative">
+      <div className="relative min-w-0">
         <select
-          className="h-10 appearance-none rounded-lg bg-light-surface px-3 pr-9 text-sm text-light-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:bg-dark-surface dark:text-dark-text dark:focus:ring-dark-primary"
+          className="h-10 max-w-full appearance-none rounded-lg bg-light-surface px-3 pr-9 text-sm text-light-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:bg-dark-surface dark:text-dark-text dark:focus:ring-dark-primary"
           value={currentLanguage}
           onChange={(e) => onLanguageChange(e.target.value)}
           aria-label={translate("filter.language.label")}
@@ -129,9 +129,9 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
         />
       </div>
 
-      <div className="relative">
+      <div className="relative min-w-0">
         <select
-          className="h-10 appearance-none rounded-lg bg-light-surface px-3 pr-9 text-sm text-light-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:bg-dark-surface dark:text-dark-text dark:focus:ring-dark-primary"
+          className="h-10 max-w-full appearance-none rounded-lg bg-light-surface px-3 pr-9 text-sm text-light-text focus:outline-none focus:ring-2 focus:ring-light-primary dark:bg-dark-surface dark:text-dark-text dark:focus:ring-dark-primary"
           value={currentSort}
           onChange={(e) => onSortChange(e.target.value)}
           aria-label={translate("sort.label")}
@@ -148,13 +148,14 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <IconButton
           icon={<Grid size={20} />}
           onClick={() => setViewMode("grid")}
           variant={viewMode === "grid" ? "primary" : "secondary"}
           className="h-10 px-4"
           label={translate('view.grid')}
+          pressed={viewMode === "grid"}
         />
         <IconButton
           icon={<List size={20} />}
@@ -162,6 +163,7 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
           variant={viewMode === "list" ? "primary" : "secondary"}
           className="h-10 px-4"
           label={translate('view.list')}
+          pressed={viewMode === "list"}
         />
         <IconButton
           icon={<Settings size={20} />}
@@ -171,14 +173,14 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
           label={translate('action.openSettings')}
         />
         {!hideNewSnippet && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!hideRecycleBin && (
               <IconButton
                 icon={<Plus size={20} />}
                 label={translate('action.newSnippet')}
                 onClick={openNewSnippetModal}
                 variant="action"
-                className="h-10 pl-2 pr-4"
+                className="h-10 pl-2 pr-4 shrink-0"
                 showLabel
               />
             )}
@@ -188,17 +190,19 @@ export const SearchAndFilter: React.FC<SearchAndFilterProps> = memo(({
               variant={showFavorites ? "primary" : "secondary"}
               className="h-10 px-4"
               label={showFavorites ? translate('action.showAll') : translate('action.showFavorites')}
+              pressed={!!showFavorites}
             />
             <IconButton
               icon={<Trash size={20} />}
               onClick={() => navigate("/recycle/snippets")}
               variant={
-                location.pathname === "/recycle/snippets"
-                  ? "primary"
-                  : "secondary"
+                  location.pathname === "/recycle/snippets"
+                    ? "primary"
+                    : "secondary"
               }
               className="h-10 px-4"
               label={translate('action.recycleBin')}
+              pressed={location.pathname === "/recycle/snippets"}
             />
           </div>
         )}

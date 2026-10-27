@@ -19,6 +19,7 @@ const ViewSwitch: React.FC<ViewSwitchProps> = ({ checked, onChange }) => {
         <button
           type="button"
           onClick={() => onChange(false)}
+          aria-pressed={!checked}
           className={`
             flex items-center justify-center gap-1 px-2 py-0.5 rounded-md transition-all duration-200 flex-1
             ${!checked 
@@ -39,6 +40,7 @@ const ViewSwitch: React.FC<ViewSwitchProps> = ({ checked, onChange }) => {
         <button
           type="button"
           onClick={() => onChange(true)}
+          aria-pressed={checked}
           className={`
             flex items-center justify-center gap-1 px-2 py-0.5 rounded-md transition-all duration-200 flex-1
             ${checked 

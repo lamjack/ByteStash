@@ -30,6 +30,8 @@
   },
   "defaultDescription": "Nessuna descrizione disponibile",
   "defaultUpdateTime": "Sconosciuto",
+  "fileCount_one": "{{count}} file",
+  "fileCount_other": "{{count}} file",
   "favorite": "Preferito",
   "pinned": "Fissato",
   "public": "Publico",

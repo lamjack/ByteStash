@@ -10,6 +10,7 @@ export interface IconButtonProps {
   className?: string;
   type?: 'button' | 'submit' | 'reset';
   showLabel?: boolean;
+  pressed?: boolean;
 }
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
@@ -21,9 +22,10 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
   disabled = false,
   className = '',
   type = 'button',
-  showLabel = false
+  showLabel = false,
+  pressed,
 }, ref) => {
-  const baseClasses = 'flex items-center justify-center gap-2 rounded-md transition-colors';
+  const baseClasses = 'flex items-center justify-center gap-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:focus-visible:ring-dark-primary focus-visible:ring-offset-1 focus-visible:ring-offset-light-bg dark:focus-visible:ring-offset-dark-bg';
   const variantClasses = {
     primary: 'bg-light-hover dark:bg-dark-hover hover:bg-light-hover dark:hover:bg-dark-hover text-light-text dark:text-dark-text',
     secondary: 'bg-light-surface dark:bg-dark-surface hover:bg-light-hover dark:hover:bg-dark-hover text-light-text dark:text-dark-text',
@@ -32,9 +34,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
     custom: ''
   };
   const sizeClasses = {
-    sm: label ? 'p-1.5 text-sm' : 'p-1.5',
-    md: label ? 'p-2 text-base' : 'p-2',
-    lg: label ? 'p-3 text-lg' : 'p-3'
+    sm: label ? 'min-h-9 min-w-9 px-2 text-sm' : 'h-9 w-9',
+    md: label ? 'min-h-10 px-3 text-base' : 'h-10 w-10',
+    lg: label ? 'min-h-11 px-4 text-lg' : 'h-11 w-11'
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -48,6 +50,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
       onClick={handleClick}
       disabled={disabled}
       type={type}
+      aria-pressed={pressed}
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className} ${
         disabled ? 'opacity-50 cursor-not-allowed' : ''
       }`}
@@ -55,7 +58,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
       aria-label={label}
     >
       {icon}
-      {(label && showLabel) && <span>{label}</span>}
+      {(label && showLabel) && <span className="whitespace-nowrap">{label}</span>}
     </button>
   );
 });

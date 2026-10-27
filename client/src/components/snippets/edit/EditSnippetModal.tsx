@@ -3,12 +3,20 @@ import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "../../../components/common/switch/Switch";
 import { CodeFragment, Snippet } from "../../../types/snippets";
-import { detectLanguageFromFileName } from "../../../utils/language/languageUtils";
+import {
+  detectLanguageFromFileName,
+  getLanguageDropdownSections,
+} from "../../../utils/language/languageUtils";
 import CategoryList from "../../categories/CategoryList";
 import CategorySuggestions from "../../categories/CategorySuggestions";
 import FileUploadButton from "../../common/buttons/FileUploadButton";
 import Modal from "../../common/modals/Modal";
 import { FragmentEditor } from "./FragmentEditor";
+
+const getMostUsedLanguage = (): string => {
+  const sections = getLanguageDropdownSections();
+  return sections.used[0] || "";
+};
 
 export interface EditSnippetModalProps {
   isOpen: boolean;
@@ -61,7 +69,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       {
         file_name: "main",
         code: "",
-        language: "",
+        language: getMostUsedLanguage(),
         position: 0,
       },
     ]);
@@ -116,7 +124,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       {
         file_name: `file${current.length + 1}`,
         code: "",
-        language: "",
+        language: getMostUsedLanguage(),
         position: current.length,
       },
     ]);
@@ -238,6 +246,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
+      fullHeight
       expandable={true}
       title={
         <h2 className="text-xl font-bold text-light-text dark:text-dark-text">
@@ -268,14 +277,6 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
             height: 20px;
             background: linear-gradient(to top, var(--footer-bg), transparent);
             pointer-events: none;
-          }
-
-          .add-fragment-button {
-            transition: all 0.2s ease-in-out;
-          }
-
-          .add-fragment-button:hover {
-            transform: translateY(-1px);
           }
 
           :root {
@@ -320,9 +321,11 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                   placeholder={translate('editSnippetModal.form.title.placeholder', { max: 100 })}
                   maxLength={100}
                 />
-                <p className="mt-1 text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                  {translate('editSnippetModal.form.title.counter', { characters: title.length, max: 100 })}
-                </p>
+                {title.length >= 80 && (
+                  <p className="mt-1 text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                    {translate('editSnippetModal.form.title.counter', { characters: title.length, max: 100 })}
+                  </p>
+                )}
               </div>
 
               {/* Description input */}
@@ -366,9 +369,11 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                   handleHashtag={false}
                   className="block w-full p-2 mt-1 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary focus:border-light-primary dark:focus:border-dark-primary"
                 />
-                <p className="mt-1 text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                  {translate('editSnippetModal.form.categories.counter', { categories: categories.length, max: 20 })}
-                </p>
+                {categories.length >= 16 && (
+                  <p className="mt-1 text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                    {translate('editSnippetModal.form.categories.counter', { categories: categories.length, max: 20 })}
+                  </p>
+                )}
                 <CategoryList
                   categories={categories}
                   onCategoryClick={handleRemoveCategory}
@@ -379,7 +384,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
 
               {/* Public snippet section */}
               <div className="space-y-1">
-                <label className="flex items-center gap-2">
+                <label className="flex flex-wrap items-center gap-2">
                   <Switch
                     id="isPublic"
                     checked={!!isPublic}
@@ -391,10 +396,11 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                   <span className="text-sm font-medium text-light-text dark:text-dark-text">
                     {translate('editSnippetModal.form.isPublic.label')}
                   </span>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                    {translate('editSnippetModal.form.isPublic.description')}
+                  </span>
                 </label>
-                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                  {translate('editSnippetModal.form.isPublic.description')}
-                </p>
               </div>
 
               {/* Code Fragments section */}
