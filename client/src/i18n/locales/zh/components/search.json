@@ -17,7 +17,6 @@
     "categories": "分类",
     "clear": "清除选择",
     "close": "关闭分类与标签",
-    "description": "浏览 {{total}} 个代码片段使用的分类数据。",
     "noCategories": "没有符合的分类",
     "noTags": "没有符合的标签",
     "search": "搜索分类与标签",
