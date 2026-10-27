@@ -1,6 +1,7 @@
 services:
   server:
     restart: unless-stopped
+    image: registry.wiz.mo/wiz-tools/bytestash:${BYTESTASH_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
