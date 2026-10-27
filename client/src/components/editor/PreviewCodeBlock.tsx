@@ -5,6 +5,7 @@ import {
   getLanguageLabel,
   getMonacoLanguage,
 } from "../../utils/language/languageUtils";
+import { editorPalette } from "../../utils/editor/editorTheme";
 import CopyButton from "../common/buttons/CopyButton";
 import { useTheme } from "../../contexts/ThemeContext";
 import RawButton from "../common/buttons/RawButton";
@@ -63,6 +64,7 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
   }, [theme]);
 
   const isDark = effectiveTheme === "dark";
+  const palette = editorPalette(isDark);
   const isMarkdown = getLanguageLabel(language) === "markdown";
   const LINE_HEIGHT = 19;
   const visibleHeight = (previewLines + 2) * LINE_HEIGHT;
@@ -72,15 +74,13 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
     .slice(0, previewLines + 5)
     .join("\n");
 
-  const backgroundColor = isDark ? "#1E1E1E" : "#ffffff";
-
   return (
     <div className="relative select-none" style={{ height: visibleHeight }}>
       <style>
         {`
           .markdown-content-preview {
-            color: var(--text-color);
-            background-color: ${backgroundColor};
+            color: ${palette.text};
+            background-color: ${palette.surface};
             padding: 1rem;
             border-radius: 0.5rem;
             position: relative;
@@ -94,9 +94,6 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
           }) {
             visibility: hidden;
           }
-          :root {
-            --text-color: ${isDark ? "#ffffff" : "#000000"};
-          }
         `}
       </style>
 
@@ -104,7 +101,7 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
         {isMarkdown ? (
           <div
             className="overflow-hidden rounded-lg markdown-content markdown-content-preview"
-            style={{ backgroundColor }}
+            style={{ backgroundColor: palette.surface }}
           >
             <MarkdownRenderer
               className={`markdown prose ${isDark ? "prose-invert" : ""
@@ -119,13 +116,13 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
             height: visibleHeight, 
             borderRadius: "0.5rem", 
             overflow: "hidden", 
-            background: backgroundColor,
-            border: isDark ? '1px solid #333' : '1px solid #e5e7eb'
+            background: palette.surface,
+            border: `1px solid ${palette.border}`,
           }}>
             <Editor
               height={visibleHeight}
               language={getMonacoLanguage(language)}
-              theme={isDark ? "vs-dark" : "light"}
+              theme={palette.monacoTheme}
               value={truncatedCode}
               options={{
                 readOnly: true,
@@ -148,7 +145,7 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
           className="absolute inset-x-0 bottom-0 rounded-b-lg pointer-events-none bg-gradient-to-t to-transparent"
           style={{
             height: `${LINE_HEIGHT * 2}px`,
-            background: `linear-gradient(to top, ${backgroundColor}, transparent)`,
+            background: `linear-gradient(to top, ${palette.surface}, transparent)`,
           }}
         />
 
