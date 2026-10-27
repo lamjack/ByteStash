@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Folder } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import BaseDropdown from '../common/dropdowns/BaseDropdown';
+import { describeCategory } from '../../utils/categories/categoryUtils';
 
 export interface CategorySuggestionsProps {
   inputValue: string;
@@ -125,6 +127,15 @@ const CategorySuggestions: React.FC<CategorySuggestionsProps> = ({
       onSelect={handleSelect}
       onKeyDown={handleKeyDown}
       getSections={getSections}
+      renderItem={(item) => {
+        const { label, isFolder } = describeCategory(item);
+        return isFolder ? (
+          <>
+            <Folder size={14} aria-hidden="true" />
+            {label}
+          </>
+        ) : item;
+      }}
       placeholder={placeholder}
       className={className}
       disabled={disabled || (maxCategories !== undefined && selectedCategories.length >= maxCategories)}
