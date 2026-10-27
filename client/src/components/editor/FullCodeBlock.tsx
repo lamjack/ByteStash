@@ -4,12 +4,16 @@ import Editor from "@monaco-editor/react";
 import {
   getLanguageLabel,
   getMonacoLanguage,
+  initializeMonaco,
 } from "../../utils/language/languageUtils";
+import { editorPalette } from "../../utils/editor/editorTheme";
 import CopyButton from "../common/buttons/CopyButton";
 import { useTheme } from "../../contexts/ThemeContext";
 import RawButton from "../common/buttons/RawButton";
 import ExportImageButton from "./export/ExportImageButton";
 import ExportImageModal from "./export/ExportImageModal";
+
+initializeMonaco();
 
 export interface FullCodeBlockProps {
   code: string;
@@ -53,6 +57,7 @@ export const FullCodeBlock: React.FC<FullCodeBlockProps> = ({
   }, [theme]);
 
   const isDark = effectiveTheme === "dark";
+  const palette = editorPalette(isDark);
   const isMarkdown = getLanguageLabel(language) === "markdown";
   const [highlighterHeight, setHighlighterHeight] = useState<string>("100px");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,21 +80,16 @@ export const FullCodeBlock: React.FC<FullCodeBlockProps> = ({
     const newHeight = Math.min(500, Math.max(100, contentHeight));
     setHighlighterHeight(`${newHeight}px`);
   };
-  const backgroundColor = isDark ? "#1E1E1E" : "#ffffff";
-
   return (
     <div className="relative">
       <style>
         {`
           .markdown-content-full {
-            color: var(--text-color);
-            background-color: ${backgroundColor};
+            color: ${palette.text};
+            background-color: ${palette.surface};
             padding: 1rem;
             border-radius: 0.5rem;
             position: relative;
-          }
-          :root {
-            --text-color: ${isDark ? "#ffffff" : "#000000"};
           }
         `}
       </style>
@@ -97,7 +97,7 @@ export const FullCodeBlock: React.FC<FullCodeBlockProps> = ({
         {isMarkdown ? (
           <div
             className="rounded-lg markdown-content markdown-content-full"
-            style={{ backgroundColor }}
+            style={{ backgroundColor: palette.surface }}
           >
             <MarkdownRenderer
               className={`markdown prose ${isDark ? "prose-invert" : ""
@@ -111,13 +111,13 @@ export const FullCodeBlock: React.FC<FullCodeBlockProps> = ({
             maxHeight: "500px", 
             borderRadius: "0.5rem", 
             overflow: "hidden", 
-            background: backgroundColor,
-            border: isDark ? '1px solid #333' : '1px solid #e5e7eb'
+            background: palette.surface,
+            border: `1px solid ${palette.border}`,
           }}>
             <Editor
               height={highlighterHeight}
               language={getMonacoLanguage(language)}
-              theme={isDark ? "vs-dark" : "light"}
+              theme={palette.monacoTheme}
               value={code}
               options={{
                 readOnly: true,

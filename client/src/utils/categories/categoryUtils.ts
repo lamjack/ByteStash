@@ -21,6 +21,14 @@ export interface FacetedSnippetTaxonomy {
 
 const FOLDER_PREFIX = "folder:";
 
+export const describeCategory = (value: string): { label: string; isFolder: boolean } => {
+  const isFolder = value.startsWith(FOLDER_PREFIX);
+  return {
+    label: isFolder ? value.slice(FOLDER_PREFIX.length) : value,
+    isFolder,
+  };
+};
+
 export const partitionSnippetCategories = (values: string[]): SnippetTaxonomy =>
   values.reduce<SnippetTaxonomy>(
     (result, value) => {

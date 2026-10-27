@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { darkSyntaxTheme, lightSyntaxTheme } from '../../../utils/editor/syntaxThemes';
 
 export interface CarbonExportPreviewProps {
   code: string;
@@ -13,7 +13,7 @@ export const CarbonExportPreview = forwardRef<HTMLDivElement, CarbonExportPrevie
   ({ code, language, showLineNumbers }, ref) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const syntaxTheme = isDark ? vscDarkPlus : vs;
+    const syntaxTheme = isDark ? darkSyntaxTheme : lightSyntaxTheme;
 
     return (
       <div 

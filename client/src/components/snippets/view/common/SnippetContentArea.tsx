@@ -15,6 +15,7 @@ import {
   SnippetsQueryKey,
 } from "../../../../hooks/useSnippetsQuery";
 import { PageContainer } from "../../../common/layout/PageContainer";
+import SnippetEmptyState from "../../list/SnippetEmptyState";
 import SnippetList from "../../list/SnippetList";
 
 interface SnippetContentAreaProps {
@@ -30,6 +31,8 @@ interface SnippetContentAreaProps {
   onCategoryClick: (category: string) => void;
   onEdit: (snippet: Snippet) => void;
   onShare: (snippet: Snippet) => void;
+  onCreateSnippet: () => void;
+  onClearFilters: () => void;
 }
 
 const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
@@ -45,6 +48,8 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
   onCategoryClick,
   onEdit,
   onShare,
+  onCreateSnippet,
+  onClearFilters,
 }) => {
   const { t: translate } = useTranslation('components/snippets/view/common');
   const [searchParams] = useSearchParams();
@@ -62,6 +67,9 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
     sort: searchParams.get("sort") || "newest",
     viewType: "base",
   }), [searchParams, includeCodeInSearch, showFavorites]);
+  const hasActiveFilters = Boolean(
+    queryFilters.search || queryFilters.language || queryFilters.category || showFavorites
+  );
 
   const {
     data,
@@ -268,6 +276,13 @@ const SnippetContentArea: React.FC<SnippetContentAreaProps> = ({
         isAuthenticated={isAuthenticated}
         pinSnippet={pinSnippet}
         favoriteSnippet={favoriteSnippet}
+        emptyState={
+          <SnippetEmptyState
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={onClearFilters}
+            onCreate={onCreateSnippet}
+          />
+        }
       />
 
       {hasNextPage && (

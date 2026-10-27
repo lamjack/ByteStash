@@ -1,6 +1,6 @@
 .markdown-content {
-  color: white;
-  background-color: #1E1E1E;
+  color: inherit;
+  background-color: transparent;
   padding: 1rem;
   border-radius: 0.5rem;
   position: relative;

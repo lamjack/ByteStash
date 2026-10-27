@@ -1,3 +1,14 @@
 {
+  "empty": {
+    "filtered": {
+      "title": "No snippets match the current filters",
+      "action": "Clear filters"
+    },
+    "library": {
+      "title": "No snippets yet",
+      "body": "Save your first snippet to start building the library.",
+      "action": "New snippet"
+    }
+  },
   "noSnippetsMatch": "No snippets match your search criteria"
 }

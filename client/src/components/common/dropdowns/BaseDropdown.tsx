@@ -18,6 +18,7 @@ export interface BaseDropdownProps {
   disabled?: boolean;
   maxLength?: number;
   showChevron?: boolean;
+  renderItem?: (item: string) => React.ReactNode;
 }
 
 /**
@@ -38,6 +39,7 @@ const BaseDropdown = forwardRef<BaseDropdownRef, BaseDropdownProps>(({
   disabled = false,
   maxLength,
   showChevron = true,
+  renderItem,
   ...props
 }, ref) => {
   const { t: translate } = useTranslation('components/common/dropdowns');
@@ -237,7 +239,7 @@ const BaseDropdown = forwardRef<BaseDropdownRef, BaseDropdownProps>(({
                 return (
                   <li
                     key={`${section.title}-${item}`}
-                    className={`px-4 py-2 cursor-pointer text-light-text dark:text-dark-text text-sm ${
+                    className={`flex items-center gap-2 px-4 py-2 cursor-pointer text-light-text dark:text-dark-text text-sm ${
                       highlightedIndex === currentIndex
                         ? "bg-light-primary/20 dark:bg-dark-primary/20"
                         : "hover:bg-light-hover dark:hover:bg-dark-hover"
@@ -249,7 +251,7 @@ const BaseDropdown = forwardRef<BaseDropdownRef, BaseDropdownProps>(({
                     role="option"
                     aria-selected={highlightedIndex === currentIndex}
                   >
-                    {item}
+                    {renderItem ? renderItem(item) : item}
                   </li>
                 );
               })}

@@ -1,6 +1,14 @@
 import { CodeFragment, Snippet } from "../../types/snippets";
 import * as monaco from "monaco-editor";
 import { registerX3Language } from "./x3-4gl-language"; 
+import {
+  EDITOR_ACTIVE_LINE_NUMBER,
+  EDITOR_LINE_HIGHLIGHT,
+  EDITOR_LINE_NUMBER,
+  EDITOR_SURFACE,
+  EDITOR_TEXT,
+  MONACO_THEME,
+} from "../editor/editorTheme";
 import { 
   FileJson, 
   FileText, 
@@ -605,7 +613,7 @@ export const configureMonaco = () => {
 
   registerX3Language(); 
   
-  monaco.editor.defineTheme("bytestash-dark", {
+  monaco.editor.defineTheme(MONACO_THEME.dark, {
     base: "vs-dark",
     inherit: true,
     rules: [
@@ -624,15 +632,30 @@ export const configureMonaco = () => {
       { token: "operator", foreground: "D4D4D4" },
     ],
     colors: {
-      "editor.background": "#1E1E1E",
-      "editor.foreground": "#D4D4D4",
-      "editor.lineHighlightBackground": "#2F2F2F",
-      "editorLineNumber.foreground": "#858585",
-      "editorLineNumber.activeForeground": "#C6C6C6",
+      "editor.background": EDITOR_SURFACE.dark,
+      "editor.foreground": EDITOR_TEXT.dark,
+      "editor.lineHighlightBackground": EDITOR_LINE_HIGHLIGHT.dark,
+      "editorLineNumber.foreground": EDITOR_LINE_NUMBER,
+      "editorLineNumber.activeForeground": EDITOR_ACTIVE_LINE_NUMBER.dark,
+      "editorGutter.background": EDITOR_SURFACE.dark,
       "editor.selectionBackground": "#264F78",
       "editor.inactiveSelectionBackground": "#3A3D41",
       "editorBracketMatch.background": "#0D3A58",
       "editorBracketMatch.border": "#888888",
+    },
+  });
+
+  monaco.editor.defineTheme(MONACO_THEME.light, {
+    base: "vs",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": EDITOR_SURFACE.light,
+      "editor.foreground": EDITOR_TEXT.light,
+      "editor.lineHighlightBackground": EDITOR_LINE_HIGHLIGHT.light,
+      "editorLineNumber.foreground": EDITOR_LINE_NUMBER,
+      "editorLineNumber.activeForeground": EDITOR_ACTIVE_LINE_NUMBER.light,
+      "editorGutter.background": EDITOR_SURFACE.light,
     },
   });
 };
