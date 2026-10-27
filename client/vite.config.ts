@@ -1,6 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import monacoEditorPlugin from 'vite-plugin-monaco-editor';
+
+// The release version lives in the workspace root package.json
+const { version: appVersion } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 // Parse allowed hosts from environment variable
 const allowedHosts = process.env.ALLOWED_HOSTS
@@ -8,6 +12,9 @@ const allowedHosts = process.env.ALLOWED_HOSTS
   : undefined;
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   plugins: [
     react(),
     monacoEditorPlugin({ globalAPI: true }),
