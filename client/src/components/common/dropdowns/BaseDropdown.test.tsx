@@ -38,6 +38,7 @@ describe("BaseDropdown", () => {
             value="#git"
             onChange={() => {}}
             onSelect={() => {}}
+            renderItem={(item) => <span data-testid="rendered-option">{item.toUpperCase()}</span>}
             getSections={() => [
               { title: "Categories", items: ["gitignore"] },
             ]}
@@ -56,6 +57,7 @@ describe("BaseDropdown", () => {
 
     const suggestions = container.querySelector('[role="listbox"]');
     const pageContent = container.querySelector('[data-testid="page-content"]');
+    expect(container.querySelector('[data-testid="rendered-option"]')?.textContent).toBe("GITIGNORE");
     expect(suggestions).not.toBeNull();
     expect(pageContent).not.toBeNull();
     expect(getStackingLevel(suggestions!)).toBeGreaterThan(

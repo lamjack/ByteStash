@@ -1,3 +1,14 @@
 {
+  "empty": {
+    "filtered": {
+      "title": "没有符合当前筛选条件的片段",
+      "action": "清除筛选"
+    },
+    "library": {
+      "title": "还没有片段",
+      "body": "保存第一段代码，开始建立你的片段库。",
+      "action": "新建片段"
+    }
+  },
   "noSnippetsMatch": "没有符合搜索条件的代码片段"
 }

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { getMonacoLanguage } from '../../utils/language/languageUtils';
+import { editorPalette } from '../../utils/editor/editorTheme';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export interface CodeEditorProps {
@@ -51,6 +52,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [theme]);
 
   const isDark = effectiveTheme === 'dark';
+  const palette = editorPalette(isDark);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -107,7 +109,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [monacoLanguage]);
 
   return (
-    <div ref={containerRef} className="overflow-hidden rounded-lg border border-light-border dark:border-dark-border">
+    <div
+      ref={containerRef}
+      className="overflow-hidden rounded-lg border"
+      style={{ backgroundColor: palette.surface, borderColor: palette.border }}
+    >
       <Editor
         height={editorHeight}
         value={code}
@@ -117,7 +123,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           setTimeout(updateEditorHeight, 10);
         }}
         onMount={handleEditorDidMount}
-        theme={isDark ? "vs-dark" : "light"}
+        theme={palette.monacoTheme}
         options={{
           minimap: { enabled: false },
           scrollBeyondLastLine: false,

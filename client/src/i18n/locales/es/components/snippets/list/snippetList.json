@@ -1,3 +1,14 @@
 {
+  "empty": {
+    "filtered": {
+      "title": "Ningún fragmento coincide con los filtros actuales",
+      "action": "Borrar filtros"
+    },
+    "library": {
+      "title": "Aún no hay fragmentos",
+      "body": "Guarda tu primer fragmento para empezar a crear tu biblioteca.",
+      "action": "Nuevo fragmento"
+    }
+  },
   "noSnippetsMatch": "Ningún fragmento coincide con tu búsqueda actual"
 }

@@ -17,7 +17,6 @@
     "categories": "Categories",
     "clear": "Clear selection",
     "close": "Close categories and tags",
-    "description": "Browse the taxonomy used by {{total}} snippets.",
     "noCategories": "No matching categories",
     "noTags": "No matching tags",
     "search": "Search categories and tags",

@@ -147,9 +147,6 @@ const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
             >
               {translate("drawer.title")}
             </h2>
-            <p className="mt-1 text-sm text-light-text-secondary dark:text-dark-text-secondary">
-              {translate("drawer.description", { total: metadata.counts.total })}
-            </p>
           </div>
           <button
             ref={closeButtonRef}
