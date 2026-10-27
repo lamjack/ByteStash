@@ -63,7 +63,7 @@ const SnippetList: React.FC<SnippetListProps> = ({
       className={
         viewMode === "grid"
           ? "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
-          : "space-y-4"
+          : "divide-y divide-light-border/70 overflow-hidden rounded-xl bg-light-surface/60 dark:divide-dark-border/70 dark:bg-dark-surface/60"
       }
     >
       {snippets.map((snippet) => (

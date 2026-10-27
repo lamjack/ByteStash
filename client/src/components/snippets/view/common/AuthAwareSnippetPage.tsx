@@ -5,10 +5,18 @@ import { useTranslation } from "react-i18next";
 import { ROUTES } from "../../../../constants/routes";
 import { useAuth } from "../../../../hooks/useAuth";
 import { useSettings } from "../../../../hooks/useSettings";
+import { useEditSnippet, useMoveToRecycleBin } from "../../../../hooks/useSnippetsQuery";
+import { useToast } from "../../../../hooks/useToast";
+import { snippetService } from "../../../../service/snippetService";
 import { Snippet } from "../../../../types/snippets";
+import { EMPTY_SNIPPET_METADATA, type SnippetMetadata } from "../../../../types/metadata";
 import { getSnippetById, getPublicSnippetById } from "../../../../utils/api/snippets";
+import { ConfirmationModal } from "../../../common/modals/ConfirmationModal";
 import { PageContainer } from "../../../common/layout/PageContainer";
+import EditSnippetModal from "../../edit/EditSnippetModal";
+import { ShareMenu } from "../../share/ShareMenu";
 import { FullCodeView } from "../FullCodeView";
+import { SnippetDetailActions } from "./SnippetDetailActions";
 
 interface SnippetPageLocationState {
   from?: string;
@@ -18,14 +26,24 @@ const AuthAwareSnippetView: React.FC = () => {
   const { t: translate } = useTranslation("components/snippets/view/common");
   const { snippetId } = useParams<{ snippetId: string }>();
   const [snippet, setSnippet] = useState<Snippet | null>(null);
+  const [isOwned, setIsOwned] = useState(false);
+  const [metadata, setMetadata] = useState<SnippetMetadata>(EMPTY_SNIPPET_METADATA);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [tryingPublicAccess, setTryingPublicAccess] = useState(false);
+  const [isEditSnippetModalOpen, setIsEditSnippetModalOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const { isAuthenticated } = useAuth();
   const { showLineNumbers } = useSettings();
+  const { addToast } = useToast();
+  const editSnippetMutation = useEditSnippet();
+  const moveToRecycleBinMutation = useMoveToRecycleBin();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t: translateCard } = useTranslation("components/snippets/list/snippetCard");
   const locationState = location.state as SnippetPageLocationState | null;
   const fallbackPath = isAuthenticated ? ROUTES.HOME : ROUTES.PUBLIC_SNIPPETS;
   const returnPath = locationState?.from || fallbackPath;
@@ -41,24 +59,29 @@ const AuthAwareSnippetView: React.FC = () => {
     setError(null);
     setTryingPublicAccess(false);
     setRequiresAuth(false);
+    setIsOwned(false);
 
     try {
       if (isAuthenticated) {
         const data = await getSnippetById(snippetId);
         setSnippet(data);
+        setIsOwned(true);
         return;
       }
 
+      setIsOwned(false);
       setTryingPublicAccess(true);
       const publicData = await getPublicSnippetById(snippetId);
       setSnippet(publicData);
     } catch (err: any) {
+      setIsOwned(false);
       if (err.status === 401 || err.status === 403) {
         setRequiresAuth(true);
         if (!tryingPublicAccess) {
           try {
             const publicData = await getPublicSnippetById(snippetId);
             setSnippet(publicData);
+            setIsOwned(false);
             setRequiresAuth(false);
             setError(null);
             return;
@@ -73,6 +96,57 @@ const AuthAwareSnippetView: React.FC = () => {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOwned) return;
+
+    const fetchMetadata = async () => {
+      try {
+        const data = await snippetService.getSnippetsMetadata();
+        setMetadata(data);
+      } catch (error) {
+        console.error("Failed to fetch metadata:", error);
+      }
+    };
+
+    fetchMetadata();
+  }, [isOwned]);
+
+  const handleSnippetSubmit = async (
+    snippetData: Omit<Snippet, "id" | "updated_at">
+  ) => {
+    if (!snippet) return;
+
+    try {
+      const updated = await editSnippetMutation.mutateAsync({
+        id: snippet.id,
+        snippet: snippetData,
+      });
+      setSnippet(updated ?? { ...snippet, ...snippetData });
+      addToast(translate("baseSnippetStorage.success.snippetUpdated"), "success");
+    } catch (error) {
+      addToast(translate("baseSnippetStorage.error.snippetUpdated"), "error");
+      throw error;
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!snippet) return;
+
+    try {
+      await moveToRecycleBinMutation.mutateAsync(snippet.id);
+      addToast(
+        translate("snippetContentArea.success.moveSnippetToRecycleBin"),
+        "success"
+      );
+      navigate(returnPath);
+    } catch {
+      addToast(
+        translate("snippetContentArea.error.moveSnippetToRecycleBin"),
+        "error"
+      );
     }
   };
 
@@ -149,14 +223,23 @@ const AuthAwareSnippetView: React.FC = () => {
 
   return (
     <PageContainer className="max-w-6xl">
-      <button
-        type="button"
-        onClick={handleBack}
-        className="mb-4 flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium text-light-text-secondary transition-colors hover:bg-light-surface hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:text-dark-text-secondary dark:hover:bg-dark-surface dark:hover:text-dark-text dark:focus-visible:ring-dark-primary"
-      >
-        <ArrowLeft size={18} aria-hidden="true" />
-        {translate("backToSnippets")}
-      </button>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium text-light-text-secondary transition-colors hover:bg-light-surface hover:text-light-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:text-dark-text-secondary dark:hover:bg-dark-surface dark:hover:text-dark-text dark:focus-visible:ring-dark-primary"
+        >
+          <ArrowLeft size={18} aria-hidden="true" />
+          {translate("backToSnippets")}
+        </button>
+        {isOwned && snippet && (
+          <SnippetDetailActions
+            onEdit={() => setIsEditSnippetModalOpen(true)}
+            onShare={() => setIsShareOpen(true)}
+            onDelete={() => setIsDeleteConfirmOpen(true)}
+          />
+        )}
+      </div>
       <main id="main-content">
         <FullCodeView
           snippet={snippet}
@@ -164,6 +247,35 @@ const AuthAwareSnippetView: React.FC = () => {
           onCategoryClick={handleCategoryClick}
         />
       </main>
+      {isOwned && snippet && (
+        <>
+          <EditSnippetModal
+            isOpen={isEditSnippetModalOpen}
+            onClose={() => setIsEditSnippetModalOpen(false)}
+            onSubmit={handleSnippetSubmit}
+            snippetToEdit={snippet}
+            showLineNumbers={showLineNumbers}
+            allCategories={metadata.categories}
+          />
+          <ShareMenu
+            snippet={snippet}
+            isOpen={isShareOpen}
+            onClose={() => setIsShareOpen(false)}
+          />
+          <ConfirmationModal
+            isOpen={isDeleteConfirmOpen}
+            onClose={() => setIsDeleteConfirmOpen(false)}
+            onConfirm={handleDeleteConfirm}
+            title={translateCard("confirmationModalDelete.title.isRecycleView.false")}
+            message={translateCard("confirmationModalDelete.message.isRecycleView.false", {
+              title: snippet.title,
+            })}
+            confirmLabel={translateCard("confirmationModalDelete.confirmLabel.isRecycleView.false")}
+            cancelLabel={t("action.cancel")}
+            variant="danger"
+          />
+        </>
+      )}
     </PageContainer>
   );
 };

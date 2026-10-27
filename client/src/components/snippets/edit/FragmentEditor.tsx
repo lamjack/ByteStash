@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Trash2,
   ChevronUp,
@@ -26,11 +26,6 @@ interface FragmentEditorProps {
   canDelete: boolean;
 }
 
-const getMostUsedLanguage = (): string => {
-  const sections = getLanguageDropdownSections();
-  return sections.used[0] || "";
-};
-
 export const FragmentEditor: React.FC<FragmentEditorProps> = ({
   fragment,
   onUpdate,
@@ -45,15 +40,6 @@ export const FragmentEditor: React.FC<FragmentEditorProps> = ({
 }) => {
   const { t: translate } = useTranslation('components/snippets/edit');
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (fragment.language || fragment.code.trim()) return;
-
-    const fallback = getMostUsedLanguage();
-    if (fallback) {
-      onUpdate({ ...fragment, language: fallback });
-    }
-  }, []);
 
   const handleCodeChange = (newCode: string | undefined) => {
     onUpdate({
@@ -71,7 +57,7 @@ export const FragmentEditor: React.FC<FragmentEditorProps> = ({
 
   return (
     <div className="border rounded-lg shadow-lg bg-light-surface dark:bg-dark-surface border-light-border dark:border-dark-border">
-      <div className="flex items-center gap-2 p-3 bg-light-hover dark:bg-dark-hover">
+      <div className="flex flex-wrap items-center gap-2 p-3 bg-light-hover dark:bg-dark-hover">
         <div className="flex items-center gap-0.5">
           <IconButton
             icon={<ChevronUp size={16} />}
@@ -94,7 +80,7 @@ export const FragmentEditor: React.FC<FragmentEditorProps> = ({
         </div>
 
         <div className="flex items-center flex-1 gap-3">
-          <div className="w-1/3">
+          <div className="w-full sm:w-72 shrink-0 min-w-0">
             <input
               type="text"
               value={fragment.file_name}
@@ -105,7 +91,7 @@ export const FragmentEditor: React.FC<FragmentEditorProps> = ({
             />
           </div>
 
-          <div className="w-2/3">
+          <div className="flex-1 min-w-0">
             <BaseDropdown
               value={fragment.language}
               onChange={handleLanguageChange}

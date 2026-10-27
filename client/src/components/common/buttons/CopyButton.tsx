@@ -9,6 +9,7 @@ export interface CopyButtonProps {
 const CopyButton: React.FC<CopyButtonProps> = ({ text }) => {
   const { t: translate } = useTranslation('components/common/buttons');
   const [isCopied, setIsCopied] = useState(false);
+  const title = translate('copyButton.title');
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -41,10 +42,11 @@ const CopyButton: React.FC<CopyButtonProps> = ({ text }) => {
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
-      className="p-1 bg-light-surface dark:bg-dark-surface rounded-md 
-        hover:bg-light-hover dark:hover:bg-dark-hover transition-colors text-light-text dark:text-dark-text"
-      title={translate('copyButton.title')}
+      className="flex h-9 w-9 items-center justify-center rounded-md bg-light-surface dark:bg-dark-surface hover:bg-light-hover dark:hover:bg-dark-hover transition-colors text-light-text dark:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-light-primary dark:focus-visible:ring-dark-primary"
+      aria-label={title}
+      title={title}
     >
       {isCopied ? (
         <Check size={16} className="text-light-primary dark:text-dark-primary" />
