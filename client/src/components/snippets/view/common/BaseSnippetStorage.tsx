@@ -134,6 +134,19 @@ const BaseSnippetStorage: React.FC = () => {
     });
   }, [setSearchParams]);
 
+  const handleClearFilters = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("search");
+      next.delete("language");
+      next.delete("categories");
+      return next;
+    });
+    if (showFavorites) {
+      setShowFavorites(false);
+    }
+  }, [setSearchParams, setShowFavorites, showFavorites]);
+
   const handleSortChange = useCallback((sort: string) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -249,6 +262,8 @@ const BaseSnippetStorage: React.FC = () => {
           onCategoryClick={handleCategoryToggle}
           onEdit={openEditSnippetModal}
           onShare={openShareMenu}
+          onCreateSnippet={handleNewSnippet}
+          onClearFilters={handleClearFilters}
         />
         </main>
       </div>

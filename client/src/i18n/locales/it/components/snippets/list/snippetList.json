@@ -1,3 +1,14 @@
 {
+  "empty": {
+    "filtered": {
+      "title": "Nessuno snippet corrisponde ai filtri attuali",
+      "action": "Cancella filtri"
+    },
+    "library": {
+      "title": "Non hai ancora snippet",
+      "body": "Salva il tuo primo snippet per iniziare a creare la tua raccolta.",
+      "action": "Nuovo snippet"
+    }
+  },
   "noSnippetsMatch": "Nessun snippet corrisponde ai tuoi criteri di ricerca"
 }

@@ -25,6 +25,7 @@ export interface SnippetListProps {
     id: string,
     isFavorite: boolean
   ) => Promise<Snippet | undefined>;
+  emptyState?: React.ReactNode;
 }
 
 const SnippetList: React.FC<SnippetListProps> = ({
@@ -46,10 +47,15 @@ const SnippetList: React.FC<SnippetListProps> = ({
   isAuthenticated,
   pinSnippet,
   favoriteSnippet,
+  emptyState,
 }) => {
   const { t: translate } = useTranslation('components/snippets/list/snippetList');
 
   if (snippets.length === 0) {
+    if (emptyState !== undefined) {
+      return <>{emptyState}</>;
+    }
+
     return (
       <div className="py-12 text-center">
         <p className="mb-4 text-xl text-light-text-secondary dark:text-dark-text-secondary">
