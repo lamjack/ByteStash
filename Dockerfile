@@ -22,7 +22,9 @@ COPY client/package.json ./client/package.json
 COPY server/package.json ./server/package.json
 RUN apk add --no-cache --virtual .build-deps python3 make g++ gcc && \
       npm ci --omit=dev --workspace server && \
-      apk del .build-deps
+      apk del .build-deps && \
+      npm cache clean --force && \
+      rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /root/.npm
 
 COPY server/src ./src
 COPY server/docs ./docs
