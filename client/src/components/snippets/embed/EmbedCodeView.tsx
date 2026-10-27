@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import MarkdownRenderer from "../../common/markdown/MarkdownRenderer";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
-  vscDarkPlus,
-  oneLight,
-} from "react-syntax-highlighter/dist/cjs/styles/prism";
+  darkSyntaxTheme,
+  lightSyntaxTheme,
+} from "../../../utils/editor/syntaxThemes";
 import {
   getLanguageLabel,
   getMonacoLanguage,
@@ -73,7 +73,7 @@ export const EmbedCodeView: React.FC<EmbedCodeBlockProps> = ({
     setHighlighterHeight(`${newHeight}px`);
   };
 
-  const baseTheme = isDark ? vscDarkPlus : oneLight;
+  const baseTheme = isDark ? darkSyntaxTheme : lightSyntaxTheme;
   const getBackgroundColor = () => {
     switch (effectiveTheme) {
       case "blue":
