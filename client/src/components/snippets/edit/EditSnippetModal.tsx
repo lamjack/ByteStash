@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Globe, Lock, Plus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CodeFragment, EditPermission, Group, Snippet, SnippetVisibility } from "../../../types/snippets";
 import { fetchPublishableGroups } from "../../../utils/api/groups";
@@ -57,7 +57,6 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
   const [visibility, setVisibility] = useState<SnippetVisibility>(getSnippetVisibility(snippetToEdit));
   const [groupId, setGroupId] = useState<number | null>(snippetToEdit?.group_id ?? null);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [isSharingOpen, setIsSharingOpen] = useState(false);
   const [editPermission, setEditPermission] = useState<EditPermission>(snippetToEdit?.edit_permission ?? "owner");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -91,7 +90,6 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     setVisibility("private");
     setGroupId(null);
     setEditPermission("owner");
-    setIsSharingOpen(false);
     setError("");
     setCategoryInput("");
     setHasUnsavedChanges(false);
@@ -134,12 +132,15 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     };
   }, [isOpen]);
 
-  const visibilityOptions: SnippetVisibility[] = ["private", "public", "protected"];
+  const visibilityOptions: { value: SnippetVisibility; icon: typeof Lock }[] = [
+    { value: "private", icon: Lock },
+    { value: "public", icon: Globe },
+    { value: "protected", icon: Users },
+  ];
 
   const editPermissionOptions: EditPermission[] = ["owner", "group", "readonly"];
-  // Group editing only makes sense for group-only snippets
-  const effectiveEditPermission: EditPermission =
-    editPermission === "group" && visibility !== "protected" ? "owner" : editPermission;
+  // Edit permission is only offered for group-only snippets; others are editable by the owner only
+  const effectiveEditPermission: EditPermission = visibility === "protected" ? editPermission : "owner";
   const isLocked = isOwner && snippetToEdit?.edit_permission === "readonly" && effectiveEditPermission === "readonly";
 
   // Keep the snippet's current group selectable even if the user is no longer listed in it
@@ -259,13 +260,11 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     }
 
     if (isLocked) {
-      setIsSharingOpen(true);
       setError(translate('editSnippetModal.form.editPermission.locked'));
       return;
     }
 
     if (visibility === "protected" && !groupId) {
-      setIsSharingOpen(true);
       setError(translate('editSnippetModal.form.visibility.groupRequired'));
       return;
     }
@@ -446,111 +445,98 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                 />
               </div>
 
-              {/* Sharing settings: collapsed to a one-line summary so the code fragments stay near the top */}
+              {/* Visibility: group options only expand when "Group only" is picked */}
               {isOwner && (
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    aria-expanded={isSharingOpen}
-                    onClick={() => setIsSharingOpen((open) => !open)}
-                    className="flex w-full items-center gap-2 text-left text-sm"
-                  >
-                    {isSharingOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-                    <span className="font-medium text-light-text dark:text-dark-text">
-                      {translate('editSnippetModal.form.sharing.label')}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-sm font-medium text-light-text dark:text-dark-text">
+                      {translate('editSnippetModal.form.visibility.label')}
                     </span>
-                    <span className="truncate text-light-text-secondary dark:text-dark-text-secondary">
-                      {[
-                        translate(`editSnippetModal.form.visibility.options.${visibility}.label`),
-                        visibility === "protected" ? groupOptions.find((g) => g.id === groupId)?.name : null,
-                        translate(`editSnippetModal.form.editPermission.options.${effectiveEditPermission}.label`),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </button>
-                  {isSharingOpen && (
-                  <>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <label className="space-y-1">
-                      <span className="block text-sm font-medium text-light-text dark:text-dark-text">
-                        {translate('editSnippetModal.form.visibility.label')}
-                      </span>
-                      <select
-                        value={visibility}
-                        onChange={(e) => {
-                          const value = e.target.value as SnippetVisibility;
-                          setVisibility(value);
-                          if (value === "protected" && !groupId && groupOptions.length > 0) {
-                            setGroupId(groupOptions[0].id);
-                          }
-                          setHasUnsavedChanges(true);
-                        }}
-                        className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-60"
-                      >
-                        {visibilityOptions.map((value) => (
-                          <option
+                    <div
+                      role="radiogroup"
+                      aria-label={translate('editSnippetModal.form.visibility.label')}
+                      className="flex flex-wrap gap-2"
+                    >
+                      {visibilityOptions.map(({ value, icon: Icon }) => {
+                        const selected = visibility === value;
+                        const disabled = value === "protected" && groupOptions.length === 0;
+                        return (
+                          <button
                             key={value}
-                            value={value}
-                            disabled={value === "protected" && groupOptions.length === 0}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            disabled={disabled}
+                            title={disabled ? translate('editSnippetModal.form.visibility.noGroups') : translate(`editSnippetModal.form.visibility.options.${value}.description`)}
+                            onClick={() => {
+                              setVisibility(value);
+                              if (value === "protected" && !groupId && groupOptions.length > 0) {
+                                setGroupId(groupOptions[0].id);
+                              }
+                              setHasUnsavedChanges(true);
+                            }}
+                            className={`flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                              selected
+                                ? "border-light-primary bg-light-hover text-light-text dark:border-dark-primary dark:bg-dark-hover dark:text-dark-text"
+                                : "border-light-border text-light-text-secondary hover:bg-light-hover/50 dark:border-dark-border dark:text-dark-text-secondary dark:hover:bg-dark-hover/50"
+                            }`}
                           >
+                            <Icon size={14} aria-hidden="true" />
                             {translate(`editSnippetModal.form.visibility.options.${value}.label`)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="block text-sm font-medium text-light-text dark:text-dark-text">
-                        {translate('editSnippetModal.form.visibility.group')}
-                      </span>
-                      <select
-                        value={visibility === "protected" ? groupId ?? "" : ""}
-                        disabled={visibility !== "protected"}
-                        onChange={(e) => {
-                          setGroupId(e.target.value ? Number(e.target.value) : null);
-                          setHasUnsavedChanges(true);
-                        }}
-                        className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-60"
-                      >
-                        {visibility !== "protected" && <option value="">—</option>}
-                        {groupOptions.map((group) => (
-                          <option key={group.id} value={group.id}>
-                            {group.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="space-y-1">
-                      <span className="block text-sm font-medium text-light-text dark:text-dark-text">
-                        {translate('editSnippetModal.form.editPermission.label')}
-                      </span>
-                      <select
-                        value={effectiveEditPermission}
-                        onChange={(e) => {
-                          setEditPermission(e.target.value as EditPermission);
-                          setHasUnsavedChanges(true);
-                        }}
-                        className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary disabled:opacity-60"
-                      >
-                        {editPermissionOptions.map((value) => (
-                          <option
-                            key={value}
-                            value={value}
-                            disabled={value === "group" && visibility !== "protected"}
-                          >
-                            {translate(`editSnippetModal.form.editPermission.options.${value}.label`)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
-                    {translate(`editSnippetModal.form.visibility.options.${visibility}.description`)}{" "}
-                    {isLocked
-                      ? translate('editSnippetModal.form.editPermission.locked')
-                      : translate(`editSnippetModal.form.editPermission.options.${effectiveEditPermission}.description`)}
-                  </p>
-                  </>
+
+                  {visibility === "protected" && (
+                    <div className="space-y-1 rounded-md border border-light-border dark:border-dark-border p-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="space-y-1">
+                          <span className="block text-sm font-medium text-light-text dark:text-dark-text">
+                            {translate('editSnippetModal.form.visibility.group')}
+                          </span>
+                          <select
+                            value={groupId ?? ""}
+                            onChange={(e) => {
+                              setGroupId(e.target.value ? Number(e.target.value) : null);
+                              setHasUnsavedChanges(true);
+                            }}
+                            className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+                          >
+                            {groupOptions.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="block text-sm font-medium text-light-text dark:text-dark-text">
+                            {translate('editSnippetModal.form.editPermission.label')}
+                          </span>
+                          <select
+                            value={effectiveEditPermission}
+                            onChange={(e) => {
+                              setEditPermission(e.target.value as EditPermission);
+                              setHasUnsavedChanges(true);
+                            }}
+                            className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+                          >
+                            {editPermissionOptions.map((value) => (
+                              <option key={value} value={value}>
+                                {translate(`editSnippetModal.form.editPermission.options.${value}.label`)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                        {isLocked
+                          ? translate('editSnippetModal.form.editPermission.locked')
+                          : translate(`editSnippetModal.form.editPermission.options.${effectiveEditPermission}.description`)}
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

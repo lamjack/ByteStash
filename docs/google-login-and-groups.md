@@ -40,7 +40,7 @@ Admins manage groups under **Admin → Groups**: create, rename or delete a grou
 
 ## Who can edit
 
-The owner also picks an edit permission for each snippet:
+When a snippet is "Group only", the edit dialog expands so the owner can pick the group and who can edit it. Private and public snippets can only be edited by their owner.
 
 | Edit permission | Who can edit |
 | --- | --- |
