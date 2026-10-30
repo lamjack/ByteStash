@@ -36,5 +36,5 @@
   "pinned": "已置顶",
   "public": "公开",
   "shared": "已分享",
-  "groupOnly": "仅群组可见：{{group}}"
+  "sharedWith": "已分享给：{{names}}"
 }

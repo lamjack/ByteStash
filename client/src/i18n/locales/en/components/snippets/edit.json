@@ -30,9 +30,6 @@
       },
       "visibility": {
         "label": "Visibility",
-        "group": "Group",
-        "groupRequired": "Choose a group for a group-only snippet",
-        "noGroups": "You are not in any group yet. Ask an admin to add you.",
         "options": {
           "private": {
             "label": "Private",
@@ -43,32 +40,35 @@
             "description": "Anyone can view this snippet, even without signing in."
           },
           "protected": {
-            "label": "Group only",
-            "description": "Only signed-in members of the selected group can view this snippet."
+            "label": "Shared",
+            "description": "Only the groups and people you pick can view it (signed in)."
           }
         }
       },
       "editPermission": {
-        "label": "Who can edit",
-        "locked": "This snippet is locked. Pick another option under \"Who can edit\" to edit it.",
-        "groupNeedsGroup": "Available for group-only snippets",
-        "options": {
-          "owner": {
-            "label": "Only me",
-            "description": "Only you can edit. Everyone it is shared with can only read it."
-          },
-          "group": {
-            "label": "Group members",
-            "description": "Members of the selected group can edit the content. Only you can change sharing, edit permission or delete it."
-          },
-          "readonly": {
-            "label": "Locked",
-            "description": "Locked: nobody can edit it, including you, until you pick another option."
-          }
-        }
+        "lock": "Lock editing",
+        "lockDescription": "Nobody can edit it, including you, until you untick this.",
+        "locked": "This snippet is locked. Untick \"Lock editing\" to edit it."
       },
       "sharing": {
         "label": "Sharing"
+      },
+      "share": {
+        "label": "Share with",
+        "placeholder": "Add a group or a person by username…",
+        "noMatches": "No matching groups or people",
+        "empty": "Add at least one group or person.",
+        "required": "Add at least one group or person to share with",
+        "type": {
+          "group": "Group",
+          "user": "Person"
+        },
+        "permission": {
+          "view": "Can view",
+          "edit": "Can edit"
+        },
+        "permissionFor": "Permission for {{name}}",
+        "remove": "Remove {{name}}"
       }
     },
     "fragmentRequired": "At least one code fragment is required",

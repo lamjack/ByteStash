@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Globe, Lock, Plus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { CodeFragment, EditPermission, Group, Snippet, SnippetVisibility } from "../../../types/snippets";
+import { CodeFragment, EditPermission, Group, ShareTarget, Snippet, SnippetVisibility } from "../../../types/snippets";
 import { fetchPublishableGroups } from "../../../utils/api/groups";
 import {
   detectLanguageFromFileName,
@@ -12,12 +12,13 @@ import CategorySuggestions from "../../categories/CategorySuggestions";
 import FileUploadButton from "../../common/buttons/FileUploadButton";
 import Modal from "../../common/modals/Modal";
 import { FragmentEditor } from "./FragmentEditor";
+import { ShareTargetPicker } from "./ShareTargetPicker";
 
 const getSnippetVisibility = (snippet: Snippet | null): SnippetVisibility => {
   if (!snippet) return "private";
   if (snippet.visibility) return snippet.visibility;
   if (snippet.is_public) return "public";
-  return snippet.group_id ? "protected" : "private";
+  return snippet.shares?.length ? "protected" : "private";
 };
 
 const getMostUsedLanguage = (): string => {
@@ -32,7 +33,7 @@ export interface EditSnippetModalProps {
   snippetToEdit: Snippet | null;
   showLineNumbers: boolean;
   allCategories: string[];
-  // False when a group member edits someone else's snippet: sharing settings stay hidden
+  // False when someone it is shared with edits it: sharing settings stay hidden
   isOwner?: boolean;
 }
 
@@ -55,7 +56,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visibility, setVisibility] = useState<SnippetVisibility>(getSnippetVisibility(snippetToEdit));
-  const [groupId, setGroupId] = useState<number | null>(snippetToEdit?.group_id ?? null);
+  const [shares, setShares] = useState<ShareTarget[]>(snippetToEdit?.shares ?? []);
   const [groups, setGroups] = useState<Group[]>([]);
   const [editPermission, setEditPermission] = useState<EditPermission>(snippetToEdit?.edit_permission ?? "owner");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -88,7 +89,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     ]);
     setCategories([]);
     setVisibility("private");
-    setGroupId(null);
+    setShares([]);
     setEditPermission("owner");
     setError("");
     setCategoryInput("");
@@ -103,7 +104,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
         setFragments(JSON.parse(JSON.stringify(snippetToEdit.fragments || [])));
         setCategories(snippetToEdit.categories || []);
         setVisibility(getSnippetVisibility(snippetToEdit));
-        setGroupId(snippetToEdit.group_id ?? null);
+        setShares(snippetToEdit.shares ?? []);
         setEditPermission(snippetToEdit.edit_permission ?? "owner");
       } else {
         resetForm();
@@ -138,16 +139,9 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     { value: "protected", icon: Users },
   ];
 
-  const editPermissionOptions: EditPermission[] = ["owner", "group", "readonly"];
-  // Edit permission is only offered for group-only snippets; others are editable by the owner only
+  // Locking is offered for shared snippets; private/public ones are editable by the owner only
   const effectiveEditPermission: EditPermission = visibility === "protected" ? editPermission : "owner";
   const isLocked = isOwner && snippetToEdit?.edit_permission === "readonly" && effectiveEditPermission === "readonly";
-
-  // Keep the snippet's current group selectable even if the user is no longer listed in it
-  const groupOptions =
-    groupId && snippetToEdit?.group_name && !groups.some((g) => g.id === groupId)
-      ? [...groups, { id: groupId, name: snippetToEdit.group_name }]
-      : groups;
 
   const handleCategorySelect = (category: string) => {
     const normalizedCategory = category.toLowerCase().trim();
@@ -264,8 +258,8 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       return;
     }
 
-    if (visibility === "protected" && !groupId) {
-      setError(translate('editSnippetModal.form.visibility.groupRequired'));
+    if (visibility === "protected" && shares.length === 0) {
+      setError(translate('editSnippetModal.form.share.required'));
       return;
     }
 
@@ -277,7 +271,9 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       categories: categories,
       is_public: visibility === "public" ? 1 : 0,
       visibility,
-      group_id: visibility === "protected" ? groupId : null,
+      share_with: visibility === "protected"
+        ? shares.map(({ type, id, permission }) => ({ type, id, permission }))
+        : [],
       edit_permission: effectiveEditPermission,
       is_pinned: snippetToEdit?.is_pinned || 0,
       is_favorite: snippetToEdit?.is_favorite || 0,
@@ -445,7 +441,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                 />
               </div>
 
-              {/* Visibility: group options only expand when "Group only" is picked */}
+              {/* Visibility: share targets only expand when "Shared" is picked */}
               {isOwner && (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -459,20 +455,15 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                     >
                       {visibilityOptions.map(({ value, icon: Icon }) => {
                         const selected = visibility === value;
-                        const disabled = value === "protected" && groupOptions.length === 0;
                         return (
                           <button
                             key={value}
                             type="button"
                             role="radio"
                             aria-checked={selected}
-                            disabled={disabled}
-                            title={disabled ? translate('editSnippetModal.form.visibility.noGroups') : translate(`editSnippetModal.form.visibility.options.${value}.description`)}
+                            title={translate(`editSnippetModal.form.visibility.options.${value}.description`)}
                             onClick={() => {
                               setVisibility(value);
-                              if (value === "protected" && !groupId && groupOptions.length > 0) {
-                                setGroupId(groupOptions[0].id);
-                              }
                               setHasUnsavedChanges(true);
                             }}
                             className={`flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -490,52 +481,39 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                   </div>
 
                   {visibility === "protected" && (
-                    <div className="space-y-1 rounded-md border border-light-border dark:border-dark-border p-3">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <label className="space-y-1">
-                          <span className="block text-sm font-medium text-light-text dark:text-dark-text">
-                            {translate('editSnippetModal.form.visibility.group')}
-                          </span>
-                          <select
-                            value={groupId ?? ""}
-                            onChange={(e) => {
-                              setGroupId(e.target.value ? Number(e.target.value) : null);
-                              setHasUnsavedChanges(true);
-                            }}
-                            className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
-                          >
-                            {groupOptions.map((group) => (
-                              <option key={group.id} value={group.id}>
-                                {group.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="space-y-1">
-                          <span className="block text-sm font-medium text-light-text dark:text-dark-text">
-                            {translate('editSnippetModal.form.editPermission.label')}
-                          </span>
-                          <select
-                            value={effectiveEditPermission}
-                            onChange={(e) => {
-                              setEditPermission(e.target.value as EditPermission);
-                              setHasUnsavedChanges(true);
-                            }}
-                            className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
-                          >
-                            {editPermissionOptions.map((value) => (
-                              <option key={value} value={value}>
-                                {translate(`editSnippetModal.form.editPermission.options.${value}.label`)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                    <div className="space-y-3 rounded-md border border-light-border dark:border-dark-border p-3">
+                      <div className="space-y-1">
+                        <span className="block text-sm font-medium text-light-text dark:text-dark-text">
+                          {translate('editSnippetModal.form.share.label')}
+                        </span>
+                        <ShareTargetPicker
+                          value={shares}
+                          groups={groups}
+                          onChange={(next) => {
+                            setShares(next);
+                            setHasUnsavedChanges(true);
+                          }}
+                        />
                       </div>
-                      <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
-                        {isLocked
-                          ? translate('editSnippetModal.form.editPermission.locked')
-                          : translate(`editSnippetModal.form.editPermission.options.${effectiveEditPermission}.description`)}
-                      </p>
+                      <label className="flex items-start gap-2 text-sm text-light-text dark:text-dark-text">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={editPermission === "readonly"}
+                          onChange={(e) => {
+                            setEditPermission(e.target.checked ? "readonly" : "owner");
+                            setHasUnsavedChanges(true);
+                          }}
+                        />
+                        <span>
+                          {translate('editSnippetModal.form.editPermission.lock')}
+                          <span className="block text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                            {isLocked
+                              ? translate('editSnippetModal.form.editPermission.locked')
+                              : translate('editSnippetModal.form.editPermission.lockDescription')}
+                          </span>
+                        </span>
+                      </label>
                     </div>
                   )}
                 </div>
