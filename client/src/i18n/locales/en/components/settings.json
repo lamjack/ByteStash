@@ -38,6 +38,7 @@
         "title": "Search"
       },
       "theme": {
+        "developer": "Developer themes",
         "title": "Theme"
       },
       "view": {

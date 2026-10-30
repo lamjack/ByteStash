@@ -1,4 +1,17 @@
-const THEMES = ['light', 'dark', 'system'];
+// Keep in sync with COLOR_THEME_IDS in client/src/themes/colorThemes.ts.
+const COLOR_THEMES = [
+  'dracula',
+  'one-dark',
+  'monokai',
+  'nord',
+  'solarized-dark',
+  'solarized-light',
+  'gruvbox-dark',
+  'tokyo-night',
+  'catppuccin-mocha',
+  'github-light',
+];
+const THEMES = ['light', 'dark', 'system', ...COLOR_THEMES];
 const LOCALES = ['en', 'ru', 'es', 'ja', 'zh', 'it'];
 const VIEW_MODES = ['grid', 'list'];
 
