@@ -1,6 +1,7 @@
 import express from "express";
 import snippetService from "../services/snippetService.js";
 import Logger from "../logger.js";
+import { isAdmin } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
@@ -68,10 +69,14 @@ router.post("/", async (req, res) => {
   try {
     const newSnippet = await snippetService.createSnippet(
       req.body,
-      req.user.id
+      req.user.id,
+      { isAdmin: isAdmin(req.user.username) }
     );
     res.status(201).json(newSnippet);
   } catch (error) {
+    if ([400, 404, 409].includes(error.status)) {
+      return res.status(error.status).json({ error: error.message });
+    }
     Logger.error("Error in POST /snippets:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -150,7 +155,8 @@ router.put("/:id", async (req, res) => {
     const updatedSnippet = await snippetService.updateSnippet(
       req.params.id,
       req.body,
-      req.user.id
+      req.user.id,
+      { isAdmin: isAdmin(req.user.username) }
     );
 
     if (!updatedSnippet) {
@@ -159,6 +165,9 @@ router.put("/:id", async (req, res) => {
       res.json(updatedSnippet);
     }
   } catch (error) {
+    if ([400, 404, 409].includes(error.status)) {
+      return res.status(error.status).json({ error: error.message });
+    }
     Logger.error("Error in PUT /snippets/:id:", error);
     res.status(500).json({ error: "Internal server error" });
   }

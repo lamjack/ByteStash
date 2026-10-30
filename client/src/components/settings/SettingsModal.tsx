@@ -14,6 +14,8 @@ import {
 import JSZip from "jszip";
 import { useToast } from "../../hooks/useToast";
 import { Locale } from "../../i18n/types";
+import { Theme } from "../../types/settings";
+import { COLOR_THEMES } from "../../themes/colorThemes";
 import { Snippet } from "../../types/snippets";
 import ChangelogModal from "../common/modals/ChangelogModal";
 import Modal from "../common/modals/Modal";
@@ -53,7 +55,7 @@ export interface SettingsModalProps {
     showCategories: boolean;
     expandCategories: boolean;
     showLineNumbers: boolean;
-    theme: "light" | "dark" | "system";
+    theme: Theme;
     locale: Locale;
   };
   onSettingsChange: (newSettings: SettingsModalProps["settings"]) => void;
@@ -127,6 +129,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const [themePreference, setThemePreference] = useState(settings.theme);
   const [localePreference, setLocalePreference] = useState(settings.locale);
+
+  // The modal stays mounted, so refresh the drafts from the current settings
+  // each time it opens (settings can load from the server after first render).
+  useEffect(() => {
+    if (!isOpen) return;
+    setCompactView(settings.compactView);
+    setShowCodePreview(settings.showCodePreview);
+    setPreviewLines(settings.previewLines);
+    setIncludeCodeInSearch(settings.includeCodeInSearch);
+    setShowCategories(settings.showCategories);
+    setShowLineNumbers(settings.showLineNumbers);
+    setThemePreference(settings.theme);
+    setLocalePreference(settings.locale);
+  }, [isOpen]);
   const [showChangelog, setShowChangelog] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(
@@ -473,6 +489,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Monitor size={16} />
                 {t('theme.system')}
               </button>
+            </div>
+            <p className="mt-4 mb-2 text-sm text-light-text-secondary dark:text-dark-text-secondary">
+              {translate('settingsModal.block.theme.developer')}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {Object.values(COLOR_THEMES).map((colorTheme) => {
+                const isSelected = themePreference === colorTheme.id;
+                return (
+                  <button
+                    key={colorTheme.id}
+                    type="button"
+                    onClick={() => setThemePreference(colorTheme.id)}
+                    aria-pressed={isSelected}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm text-left border-2
+                      ${
+                        isSelected
+                          ? "border-light-primary dark:border-dark-primary"
+                          : "border-transparent hover:border-light-border dark:hover:border-dark-border"
+                      }`}
+                    style={{
+                      backgroundColor: colorTheme.editor.surface,
+                      color: colorTheme.ui.text,
+                    }}
+                  >
+                    <span className="flex shrink-0 gap-0.5" aria-hidden="true">
+                      {[
+                        colorTheme.syntax.keyword,
+                        colorTheme.syntax.string,
+                        colorTheme.syntax.function,
+                      ].map((color, index) => (
+                        <span
+                          key={index}
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </span>
+                    <span className="truncate">{colorTheme.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </SettingsGroup>
 

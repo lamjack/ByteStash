@@ -52,7 +52,9 @@ export const getSnippetById = async (id: string): Promise<Snippet> => {
 
 export const getPublicSnippetById = async (id: string): Promise<Snippet> => {
   try {
-    return await apiClient.get<Snippet>(`${API_ENDPOINTS.PUBLIC}/${id}`);
+    return await apiClient.get<Snippet>(`${API_ENDPOINTS.PUBLIC}/${id}`, {
+      requiresAuth: true,
+    });
   } catch (error) {
     console.error("Error fetching public snippet:", error);
     throw error;

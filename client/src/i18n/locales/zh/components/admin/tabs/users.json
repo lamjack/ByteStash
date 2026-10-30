@@ -59,5 +59,15 @@
   "table": {
     "emptyMessage": "未找到用户",
     "loadingMessage": "正在加载用户..."
+  },
+  "registration": {
+    "label": "允许新用户注册",
+    "open": "任何能登录的人（包括 Google 登录）都可以创建账号。",
+    "closed": "已关闭：只有现有用户和被邀请的邮箱可以登录。",
+    "success": {
+      "opened": "已开放注册",
+      "closed": "已关闭注册"
+    },
+    "error": "更新注册设置失败"
   }
 }

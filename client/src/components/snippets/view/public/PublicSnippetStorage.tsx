@@ -15,7 +15,12 @@ import {
   type SnippetMetadata,
 } from "../../../../types/metadata";
 
-const PublicSnippetStorage: React.FC = () => {
+interface PublicSnippetStorageProps {
+  // "group" lists group-only snippets of the signed-in user's groups
+  mode?: "public" | "group";
+}
+
+const PublicSnippetStorage: React.FC<PublicSnippetStorageProps> = ({ mode = "public" }) => {
   // URL-based filter state
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -54,14 +59,17 @@ const PublicSnippetStorage: React.FC = () => {
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const data = await snippetService.getPublicSnippetsMetadata();
+        const data =
+          mode === "group"
+            ? await snippetService.getGroupSnippetsMetadata()
+            : await snippetService.getPublicSnippetsMetadata();
         setMetadata(data);
       } catch (error) {
         console.error("Failed to fetch metadata:", error);
       }
     };
     fetchMetadata();
-  }, []);
+  }, [mode]);
 
 
   // URL update handlers - stable callbacks
@@ -132,7 +140,7 @@ const PublicSnippetStorage: React.FC = () => {
       <div className="min-h-screen bg-light-bg text-light-text dark:bg-dark-bg dark:text-dark-text">
         <main id="main-content" className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-start justify-between gap-4">
-          <StorageHeader isPublicView={true} />
+          <StorageHeader isPublicView={mode === "public"} isGroupView={mode === "group"} />
           <UserDropdown />
         </div>
 
@@ -152,6 +160,7 @@ const PublicSnippetStorage: React.FC = () => {
         />
 
         <PublicSnippetContentArea
+          viewType={mode}
           includeCodeInSearch={includeCodeInSearch}
           viewMode={viewMode}
           compactView={compactView}

@@ -80,8 +80,34 @@ const authenticateToken = async (req, res, next) => {
   });
 };
 
+// Like authenticateToken, but never rejects: anonymous requests continue without req.user.
+// Used on public endpoints so signed-in viewers can also see their groups' snippets.
+const optionalAuthenticateToken = (req, res, next) => {
+  if (DISABLE_ACCOUNTS) {
+    return next();
+  }
+
+  const authHeader = req.headers['bytestashauth'];
+  let token = authHeader && authHeader.split(' ')[1];
+  if (!token && req.cookies) {
+    token = req.cookies.bytestash_token;
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (!err) {
+      req.user = user;
+    }
+    next();
+  });
+};
+
 export { 
   authenticateToken, 
+  optionalAuthenticateToken,
   JWT_SECRET, 
   TOKEN_EXPIRY, 
   ALLOW_NEW_ACCOUNTS, 

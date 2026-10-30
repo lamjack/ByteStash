@@ -4,6 +4,7 @@ import componentsAdminModals from '../locales/en/components/admin/modals.json'
 import componentsAdminSelector from '../locales/en/components/admin/selector.json'
 import componentsAdminApiKeysTab from '../locales/en/components/admin/tabs/apiKeys.json'
 import componentsAdminUsersTab from '../locales/en/components/admin/tabs/users.json'
+import componentsAdminGroupsTab from '../locales/en/components/admin/tabs/groups.json'
 import componentsAdminSharesTab from '../locales/en/components/admin/tabs/shares.json'
 import componentsAdminSnippetsTab from '../locales/en/components/admin/tabs/snippets.json'
 import componentsAdminDashboardTab from '../locales/en/components/admin/tabs/dashboard.json'
@@ -35,6 +36,7 @@ export const resources = {
   'components/admin/selector': componentsAdminSelector,
   'components/admin/tabs/apiKeys': componentsAdminApiKeysTab,
   'components/admin/tabs/users': componentsAdminUsersTab,
+  'components/admin/tabs/groups': componentsAdminGroupsTab,
   'components/admin/tabs/shares': componentsAdminSharesTab,
   'components/admin/tabs/snippets': componentsAdminSnippetsTab,
   'components/admin/tabs/dashboard': componentsAdminDashboardTab,

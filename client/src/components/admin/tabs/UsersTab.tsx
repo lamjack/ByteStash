@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../../utils/api/admin';
 import { useToast } from '../../../hooks/useToast';
 import { ConfirmationModal } from '../../common/modals/ConfirmationModal';
+import { RegistrationToggle } from './RegistrationToggle';
 import { useDebounce } from '../../../hooks/useDebounce';
 import {
   FilterInput,
@@ -194,6 +195,8 @@ export const UsersTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <RegistrationToggle />
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <FilterInput

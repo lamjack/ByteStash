@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Globe, Lock, Plus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Switch } from "../../../components/common/switch/Switch";
-import { CodeFragment, Snippet } from "../../../types/snippets";
+import { CodeFragment, EditPermission, Group, ShareTarget, Snippet, SnippetVisibility } from "../../../types/snippets";
+import { fetchPublishableGroups } from "../../../utils/api/groups";
 import {
   detectLanguageFromFileName,
   getLanguageDropdownSections,
@@ -12,6 +12,14 @@ import CategorySuggestions from "../../categories/CategorySuggestions";
 import FileUploadButton from "../../common/buttons/FileUploadButton";
 import Modal from "../../common/modals/Modal";
 import { FragmentEditor } from "./FragmentEditor";
+import { ShareTargetPicker } from "./ShareTargetPicker";
+
+const getSnippetVisibility = (snippet: Snippet | null): SnippetVisibility => {
+  if (!snippet) return "private";
+  if (snippet.visibility) return snippet.visibility;
+  if (snippet.is_public) return "public";
+  return snippet.shares?.length ? "protected" : "private";
+};
 
 const getMostUsedLanguage = (): string => {
   const sections = getLanguageDropdownSections();
@@ -25,6 +33,8 @@ export interface EditSnippetModalProps {
   snippetToEdit: Snippet | null;
   showLineNumbers: boolean;
   allCategories: string[];
+  // False when someone it is shared with edits it: sharing settings stay hidden
+  isOwner?: boolean;
 }
 
 const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
@@ -34,6 +44,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
   snippetToEdit,
   showLineNumbers,
   allCategories,
+  isOwner = true,
 }) => {
   const { t } = useTranslation();
   const { t: translate } = useTranslation('components/snippets/edit');
@@ -44,7 +55,10 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
   const [categoryInput, setCategoryInput] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPublic, setIsPublic] = useState(snippetToEdit?.is_public || false);
+  const [visibility, setVisibility] = useState<SnippetVisibility>(getSnippetVisibility(snippetToEdit));
+  const [shares, setShares] = useState<ShareTarget[]>(snippetToEdit?.shares ?? []);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [editPermission, setEditPermission] = useState<EditPermission>(snippetToEdit?.edit_permission ?? "owner");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleFileNameChange = (index: number, newName: string) => {
@@ -74,6 +88,9 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       },
     ]);
     setCategories([]);
+    setVisibility("private");
+    setShares([]);
+    setEditPermission("owner");
     setError("");
     setCategoryInput("");
     setHasUnsavedChanges(false);
@@ -86,7 +103,9 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
         setDescription(snippetToEdit.description || "");
         setFragments(JSON.parse(JSON.stringify(snippetToEdit.fragments || [])));
         setCategories(snippetToEdit.categories || []);
-        setIsPublic(snippetToEdit.is_public || false);
+        setVisibility(getSnippetVisibility(snippetToEdit));
+        setShares(snippetToEdit.shares ?? []);
+        setEditPermission(snippetToEdit.edit_permission ?? "owner");
       } else {
         resetForm();
       }
@@ -98,6 +117,31 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       resetForm();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetchPublishableGroups()
+      .then((result) => {
+        if (!cancelled) setGroups(Array.isArray(result) ? result : []);
+      })
+      .catch(() => {
+        if (!cancelled) setGroups([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  const visibilityOptions: { value: SnippetVisibility; icon: typeof Lock }[] = [
+    { value: "private", icon: Lock },
+    { value: "public", icon: Globe },
+    { value: "protected", icon: Users },
+  ];
+
+  // Locking is offered for shared snippets; private/public ones are editable by the owner only
+  const effectiveEditPermission: EditPermission = visibility === "protected" ? editPermission : "owner";
+  const isLocked = isOwner && snippetToEdit?.edit_permission === "readonly" && effectiveEditPermission === "readonly";
 
   const handleCategorySelect = (category: string) => {
     const normalizedCategory = category.toLowerCase().trim();
@@ -209,13 +253,28 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       return;
     }
 
+    if (isLocked) {
+      setError(translate('editSnippetModal.form.editPermission.locked'));
+      return;
+    }
+
+    if (visibility === "protected" && shares.length === 0) {
+      setError(translate('editSnippetModal.form.share.required'));
+      return;
+    }
+
     setIsSubmitting(true);
     const snippetData = {
       title: title.slice(0, 255),
       description: description,
       fragments: fragments.map((f, idx) => ({ ...f, position: idx })),
       categories: categories,
-      is_public: isPublic ? 1 : 0,
+      is_public: visibility === "public" ? 1 : 0,
+      visibility,
+      share_with: visibility === "protected"
+        ? shares.map(({ type, id, permission }) => ({ type, id, permission }))
+        : [],
+      edit_permission: effectiveEditPermission,
       is_pinned: snippetToEdit?.is_pinned || 0,
       is_favorite: snippetToEdit?.is_favorite || 0,
     };
@@ -382,26 +441,83 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                 />
               </div>
 
-              {/* Public snippet section */}
-              <div className="space-y-1">
-                <label className="flex flex-wrap items-center gap-2">
-                  <Switch
-                    id="isPublic"
-                    checked={!!isPublic}
-                    onChange={(checked) => {
-                      setIsPublic(checked);
-                      setHasUnsavedChanges(true);
-                    }}
-                  />
-                  <span className="text-sm font-medium text-light-text dark:text-dark-text">
-                    {translate('editSnippetModal.form.isPublic.label')}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                    {translate('editSnippetModal.form.isPublic.description')}
-                  </span>
-                </label>
-              </div>
+              {/* Visibility: share targets only expand when "Shared" is picked */}
+              {isOwner && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-sm font-medium text-light-text dark:text-dark-text">
+                      {translate('editSnippetModal.form.visibility.label')}
+                    </span>
+                    <div
+                      role="radiogroup"
+                      aria-label={translate('editSnippetModal.form.visibility.label')}
+                      className="flex flex-wrap gap-2"
+                    >
+                      {visibilityOptions.map(({ value, icon: Icon }) => {
+                        const selected = visibility === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            title={translate(`editSnippetModal.form.visibility.options.${value}.description`)}
+                            onClick={() => {
+                              setVisibility(value);
+                              setHasUnsavedChanges(true);
+                            }}
+                            className={`flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                              selected
+                                ? "border-light-primary bg-light-hover text-light-text dark:border-dark-primary dark:bg-dark-hover dark:text-dark-text"
+                                : "border-light-border text-light-text-secondary hover:bg-light-hover/50 dark:border-dark-border dark:text-dark-text-secondary dark:hover:bg-dark-hover/50"
+                            }`}
+                          >
+                            <Icon size={14} aria-hidden="true" />
+                            {translate(`editSnippetModal.form.visibility.options.${value}.label`)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {visibility === "protected" && (
+                    <div className="space-y-3 rounded-md border border-light-border dark:border-dark-border p-3">
+                      <div className="space-y-1">
+                        <span className="block text-sm font-medium text-light-text dark:text-dark-text">
+                          {translate('editSnippetModal.form.share.label')}
+                        </span>
+                        <ShareTargetPicker
+                          value={shares}
+                          groups={groups}
+                          onChange={(next) => {
+                            setShares(next);
+                            setHasUnsavedChanges(true);
+                          }}
+                        />
+                      </div>
+                      <label className="flex items-start gap-2 text-sm text-light-text dark:text-dark-text">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={editPermission === "readonly"}
+                          onChange={(e) => {
+                            setEditPermission(e.target.checked ? "readonly" : "owner");
+                            setHasUnsavedChanges(true);
+                          }}
+                        />
+                        <span>
+                          {translate('editSnippetModal.form.editPermission.lock')}
+                          <span className="block text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                            {isLocked
+                              ? translate('editSnippetModal.form.editPermission.locked')
+                              : translate('editSnippetModal.form.editPermission.lockDescription')}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Code Fragments section */}
               <div>

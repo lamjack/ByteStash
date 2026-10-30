@@ -48,10 +48,12 @@
   },
   "storageHeader": {
     "private": "You're viewing your private snippets. Only you can see and modify these snippets.",
-    "public": "You're viewing publicly shared snippets. These snippets are read-only and visible to everyone."
+    "public": "You're viewing publicly shared snippets. These snippets are read-only and visible to everyone.",
+    "group": "Snippets shared with you, directly or through a group, and the ones you share. Only the people and groups they are shared with can see them."
   },
   "viewSwitch": {
     "private": "Private",
-    "public": "Public"
+    "public": "Public",
+    "group": "Shared"
   }
 }

@@ -83,7 +83,15 @@ class AdminRepository {
 
     // Toggle snippet public status
     this.statements.toggleSnippetPublic = db.prepare(`
-      UPDATE snippets SET is_public = NOT is_public WHERE id = ?
+      UPDATE snippets
+      SET is_public = NOT is_public
+      WHERE id = ?
+    `);
+
+    // Public snippets have no share targets
+    this.statements.clearSnippetSharesIfPublic = db.prepare(`
+      DELETE FROM snippet_shares
+      WHERE snippet_id = ? AND (SELECT is_public FROM snippets WHERE id = ?) = 1
     `);
 
     // Delete API key
@@ -369,7 +377,11 @@ class AdminRepository {
     this.#initializeStatements();
 
     try {
-      const result = this.statements.toggleSnippetPublic.run(snippetId);
+      const result = getDb().transaction(() => {
+        const toggled = this.statements.toggleSnippetPublic.run(snippetId);
+        this.statements.clearSnippetSharesIfPublic.run(snippetId, snippetId);
+        return toggled;
+      })();
       if (result.changes === 0) {
         throw new Error('Snippet not found');
       }

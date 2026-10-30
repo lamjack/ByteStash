@@ -73,3 +73,44 @@ test("getCategoryFacets counts active public snippets across users", () => {
   ]);
   db.close();
 });
+
+test("getCategoryFacets includes snippets shared with the viewer", () => {
+  const db = createDatabase();
+  db.exec(`
+    CREATE TABLE user_group_members (group_id INTEGER, user_id INTEGER);
+    CREATE TABLE snippet_shares (snippet_id INTEGER, group_id INTEGER, user_id INTEGER, permission TEXT);
+    INSERT INTO user_group_members (group_id, user_id) VALUES (5, 42);
+    INSERT INTO snippet_shares (snippet_id, group_id) VALUES (2, 5), (3, 6);
+    INSERT INTO snippet_shares (snippet_id, user_id) VALUES (4, 42);
+  `);
+  insertSnippet(db, 1, 7, 1);
+  insertSnippet(db, 2, 7, 0);
+  insertSnippet(db, 3, 7, 0);
+  insertSnippet(db, 4, 7, 0);
+  insertSnippet(db, 5, 42, 0);
+  insertCategory(db, 1, "public");
+  insertCategory(db, 2, "team");
+  insertCategory(db, 3, "other-team");
+  insertCategory(db, 4, "direct");
+  insertCategory(db, 5, "own-private");
+
+  assert.deepEqual(getCategoryFacets(db, null, 42), [
+    { value: "direct", count: 1 },
+    { value: "public", count: 1 },
+    { value: "team", count: 1 },
+  ]);
+  assert.deepEqual(getCategoryFacets(db, null, null, 42), [
+    { value: "direct", count: 1 },
+    { value: "team", count: 1 },
+  ]);
+  // The owner sees their shared snippets in the shared view too
+  assert.deepEqual(getCategoryFacets(db, null, null, 7), [
+    { value: "direct", count: 1 },
+    { value: "other-team", count: 1 },
+    { value: "team", count: 1 },
+  ]);
+  assert.deepEqual(getCategoryFacets(db, null, null), [
+    { value: "public", count: 1 },
+  ]);
+  db.close();
+});

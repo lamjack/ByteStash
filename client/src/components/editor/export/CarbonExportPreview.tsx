@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { darkSyntaxTheme, lightSyntaxTheme } from '../../../utils/editor/syntaxThemes';
+import { syntaxThemeFor } from '../../../utils/editor/syntaxThemes';
 
 export interface CarbonExportPreviewProps {
   code: string;
@@ -11,9 +11,12 @@ export interface CarbonExportPreviewProps {
 
 export const CarbonExportPreview = forwardRef<HTMLDivElement, CarbonExportPreviewProps>(
   ({ code, language, showLineNumbers }, ref) => {
-    const { theme } = useTheme();
-    const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const syntaxTheme = isDark ? darkSyntaxTheme : lightSyntaxTheme;
+    const { effectiveTheme, colorTheme } = useTheme();
+    const isDark = effectiveTheme === 'dark';
+    const syntaxTheme = syntaxThemeFor(isDark, colorTheme);
+    const windowBackground = colorTheme ? colorTheme.editor.surface : isDark ? '#1E1E1E' : '#ffffff';
+    const titleBarBackground = colorTheme ? colorTheme.ui.bg : isDark ? '#2D2D2D' : '#f5f5f5';
+    const titleBarBorder = colorTheme ? colorTheme.ui.border : isDark ? '#404040' : '#e5e5e5';
 
     return (
       <div 
@@ -28,7 +31,7 @@ export const CarbonExportPreview = forwardRef<HTMLDivElement, CarbonExportPrevie
         <div 
           className="rounded-xl overflow-hidden shadow-2xl flex flex-col w-full"
           style={{
-            backgroundColor: isDark ? '#1E1E1E' : '#ffffff',
+            backgroundColor: windowBackground,
             boxShadow: 'rgba(0, 0, 0, 0.55) 0px 20px 68px'
           }}
         >
@@ -36,8 +39,8 @@ export const CarbonExportPreview = forwardRef<HTMLDivElement, CarbonExportPrevie
           <div 
             className="flex items-center h-10 px-4"
             style={{ 
-              backgroundColor: isDark ? '#2D2D2D' : '#f5f5f5',
-              borderBottom: isDark ? '1px solid #404040' : '1px solid #e5e5e5'
+              backgroundColor: titleBarBackground,
+              borderBottom: `1px solid ${titleBarBorder}`
             }}
           >
             <div className="flex gap-2">

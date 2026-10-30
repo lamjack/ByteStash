@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
     const { limit, offset, filters, sort } = parseQueryParams(req.query);
 
     const { snippets, total } = await snippetService.getSnippetsPaginated({
-      userId: null,  // null = public only
+      userId: null,  // null = public only (group snippets are listed under /api/groups/snippets)
       filters,
       sort,
       limit,
@@ -77,7 +77,7 @@ router.get('/metadata', async (req, res) => {
 router.get('/:id/:fragmentId/raw', async (req, res) => {
   try {
     const { id, fragmentId } = req.params;
-    const snippet = await snippetService.findById(id);
+    const snippet = await snippetService.findById(id, req.user?.id ?? null);
     if (!snippet) {
       res.status(404).send('Snippet not found');
     } else {
@@ -99,7 +99,7 @@ router.get('/:id/:fragmentId/raw', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const snippet = await snippetService.findById(req.params.id);
+    const snippet = await snippetService.findById(req.params.id, req.user?.id ?? null);
     if (!snippet) {
       res.status(404).json({ error: 'Snippet not found' });
     } else {

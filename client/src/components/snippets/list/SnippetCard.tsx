@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  UsersRound,
   Clock,
   Users,
   ChevronLeft,
@@ -191,6 +192,7 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
   const languageLabel = getUniqueLanguages(snippet.fragments);
   const hasStatusMeta =
     snippet.is_public === 1 ||
+    Boolean(snippet.shares?.length) ||
     (isPublicView && (snippet.share_count || 0) > 0) ||
     isPinned === 1 ||
     isFavorite === 1 ||
@@ -229,6 +231,18 @@ export const SnippetCard: React.FC<SnippetCardProps> = ({
         <>
           {snippet.is_public === 1 && (
             <Globe size={14} aria-label={translate('public')} role="img" />
+          )}
+          {snippet.is_public !== 1 && !!snippet.shares?.length && (
+            <span
+              className="flex items-center gap-1"
+              title={translate('sharedWith', { names: snippet.shares.map((share) => share.name).join(', ') })}
+            >
+              <UsersRound size={14} aria-hidden="true" />
+              <span className="max-w-[8rem] truncate">
+                {snippet.shares[0].name}
+                {snippet.shares.length > 1 ? ` +${snippet.shares.length - 1}` : ''}
+              </span>
+            </span>
           )}
           {isPublicView && (snippet.share_count || 0) > 0 && (
             <Users size={14} aria-label={translate('shared')} role="img" />

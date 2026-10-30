@@ -27,6 +27,48 @@
         "counter": "{{characters}}/{{max}} characters",
         "label": "Title",
         "placeholder": "Enter the title of the snippet (max {{max}} characters)"
+      },
+      "visibility": {
+        "label": "Visibility",
+        "options": {
+          "private": {
+            "label": "Private",
+            "description": "Only you can see this snippet."
+          },
+          "public": {
+            "label": "Public",
+            "description": "Anyone can view this snippet, even without signing in."
+          },
+          "protected": {
+            "label": "Shared",
+            "description": "Only the groups and people you pick can view it (signed in)."
+          }
+        }
+      },
+      "editPermission": {
+        "lock": "Lock editing",
+        "lockDescription": "Nobody can edit it, including you, until you untick this.",
+        "locked": "This snippet is locked. Untick \"Lock editing\" to edit it."
+      },
+      "sharing": {
+        "label": "Sharing"
+      },
+      "share": {
+        "label": "Share with",
+        "placeholder": "Add a group or a person by username…",
+        "noMatches": "No matching groups or people",
+        "empty": "Add at least one group or person.",
+        "required": "Add at least one group or person to share with",
+        "type": {
+          "group": "Group",
+          "user": "Person"
+        },
+        "permission": {
+          "view": "Can view",
+          "edit": "Can edit"
+        },
+        "permissionFor": "Permission for {{name}}",
+        "remove": "Remove {{name}}"
       }
     },
     "fragmentRequired": "At least one code fragment is required",

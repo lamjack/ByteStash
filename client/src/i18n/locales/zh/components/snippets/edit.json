@@ -27,6 +27,48 @@
         "counter": "{{characters}}/{{max}} 个字符",
         "label": "标题",
         "placeholder": "输入代码片段标题（最多 {{max}} 个字符）"
+      },
+      "visibility": {
+        "label": "可见范围",
+        "options": {
+          "private": {
+            "label": "私有",
+            "description": "只有你自己可以看到这个片段。"
+          },
+          "public": {
+            "label": "公开",
+            "description": "任何人都可以查看，无需登录。"
+          },
+          "protected": {
+            "label": "指定分享",
+            "description": "只有你选择的群组和人员（登录后）可以查看。"
+          }
+        }
+      },
+      "editPermission": {
+        "lock": "锁定编辑",
+        "lockDescription": "包括你在内，没有人可以编辑，直到你取消勾选。",
+        "locked": "这个片段已锁定。请先取消勾选“锁定编辑”再编辑。"
+      },
+      "sharing": {
+        "label": "分享设置"
+      },
+      "share": {
+        "label": "分享给",
+        "placeholder": "输入群组名或用户名来添加…",
+        "noMatches": "没有匹配的群组或用户",
+        "empty": "请至少添加一个群组或人员。",
+        "required": "请至少添加一个分享对象",
+        "type": {
+          "group": "群组",
+          "user": "用户"
+        },
+        "permission": {
+          "view": "可查看",
+          "edit": "可编辑"
+        },
+        "permissionFor": "{{name}} 的权限",
+        "remove": "移除 {{name}}"
       }
     },
     "fragmentRequired": "至少需要一个代码片段",

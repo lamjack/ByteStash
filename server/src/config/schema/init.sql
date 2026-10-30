@@ -13,6 +13,35 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+CREATE TABLE IF NOT EXISTS user_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_group_members (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES user_groups (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_group_invites (
+    group_id INTEGER NOT NULL,
+    email TEXT NOT NULL COLLATE NOCASE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (group_id, email),
+    FOREIGN KEY (group_id) REFERENCES user_groups (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+
 CREATE TABLE IF NOT EXISTS snippets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -22,7 +51,9 @@ CREATE TABLE IF NOT EXISTS snippets (
     user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
     is_public BOOLEAN DEFAULT FALSE,
     is_pinned BOOLEAN DEFAULT FALSE,
-    is_favorite BOOLEAN DEFAULT FALSE
+    is_favorite BOOLEAN DEFAULT FALSE,
+    group_id INTEGER DEFAULT NULL REFERENCES user_groups (id) ON DELETE SET NULL, -- legacy, superseded by snippet_shares
+    edit_permission TEXT NOT NULL DEFAULT 'owner'
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -93,3 +124,31 @@ WHERE
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys (key);
+
+CREATE INDEX IF NOT EXISTS idx_snippets_group_id ON snippets (group_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_groups_name ON user_groups (name COLLATE NOCASE);
+
+CREATE INDEX IF NOT EXISTS idx_user_group_members_user_id ON user_group_members (user_id);
+
+-- Who a non-public snippet is shared with: one row per group or user, each with view/edit permission
+CREATE TABLE IF NOT EXISTS snippet_shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snippet_id INTEGER NOT NULL,
+    group_id INTEGER DEFAULT NULL,
+    user_id INTEGER DEFAULT NULL,
+    permission TEXT NOT NULL DEFAULT 'view',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CHECK ((group_id IS NULL) <> (user_id IS NULL)),
+    FOREIGN KEY (snippet_id) REFERENCES snippets (id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES user_groups (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_snippet_shares_group ON snippet_shares (snippet_id, group_id) WHERE group_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_snippet_shares_user ON snippet_shares (snippet_id, user_id) WHERE user_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_snippet_shares_group_id ON snippet_shares (group_id);
+
+CREATE INDEX IF NOT EXISTS idx_snippet_shares_user_id ON snippet_shares (user_id);

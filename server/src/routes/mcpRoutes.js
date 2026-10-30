@@ -2,6 +2,8 @@ import express from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpServer } from '../mcp/snippetMcpServer.js';
 import Logger from '../logger.js';
+import userRepository from '../repositories/userRepository.js';
+import { isAdmin } from '../middleware/adminAuth.js';
 
 const router = express.Router();
 
@@ -36,7 +38,9 @@ router.post('/', async (req, res) => {
   res.on('close', cleanup);
 
   try {
-    server = createMcpServer(req.user.id);
+    // API keys carry only a user id; look up the username to apply ADMIN_USERNAMES.
+    const user = await userRepository.findById(req.user.id);
+    server = createMcpServer(req.user.id, { isAdmin: isAdmin(user?.username) });
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

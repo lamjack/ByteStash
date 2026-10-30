@@ -1,4 +1,5 @@
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ColorTheme } from "../../themes/colorThemes";
 
 type PrismTheme = typeof vs;
 
@@ -29,3 +30,66 @@ export const lightSyntaxTheme = recolor(vs, {
 export const darkSyntaxTheme = recolor(vscDarkPlus, {
   "#808080": "#9d9d9d",
 });
+
+// Builds a Prism style for a named color theme on top of the matching base
+// style, so layout rules (fonts, padding, etc.) stay identical.
+const buildColorThemeSyntax = (theme: ColorTheme): PrismTheme => {
+  const base = theme.base === "dark" ? darkSyntaxTheme : lightSyntaxTheme;
+  const { syntax } = theme;
+  const tokenColors: Record<string, string> = {
+    comment: syntax.comment,
+    prolog: syntax.comment,
+    doctype: syntax.comment,
+    cdata: syntax.comment,
+    punctuation: syntax.punctuation,
+    namespace: syntax.type,
+    property: syntax.attribute,
+    tag: syntax.tag,
+    boolean: syntax.constant,
+    number: syntax.number,
+    constant: syntax.constant,
+    symbol: syntax.constant,
+    deleted: syntax.regexp,
+    selector: syntax.tag,
+    "attr-name": syntax.attribute,
+    "attr-value": syntax.string,
+    string: syntax.string,
+    char: syntax.string,
+    builtin: syntax.type,
+    inserted: syntax.string,
+    operator: syntax.operator,
+    entity: syntax.operator,
+    url: syntax.string,
+    atrule: syntax.keyword,
+    keyword: syntax.keyword,
+    function: syntax.function,
+    "class-name": syntax.type,
+    regex: syntax.regexp,
+    important: syntax.keyword,
+    variable: syntax.variable,
+  };
+
+  const style: Record<string, Record<string, unknown>> = Object.fromEntries(
+    Object.entries(base).map(([key, value]) => [key, { ...(value as object) }])
+  );
+  for (const [token, color] of Object.entries(tokenColors)) {
+    style[token] = { ...(style[token] ?? {}), color };
+  }
+  for (const key of ['code[class*="language-"]', 'pre[class*="language-"]']) {
+    style[key] = { ...(style[key] ?? {}), color: theme.ui.text, background: theme.editor.surface };
+  }
+  return style as PrismTheme;
+};
+
+const colorThemeSyntaxCache = new Map<string, PrismTheme>();
+
+export const syntaxThemeFor = (isDark: boolean, colorTheme?: ColorTheme | null): PrismTheme => {
+  if (!colorTheme) return isDark ? darkSyntaxTheme : lightSyntaxTheme;
+
+  let style = colorThemeSyntaxCache.get(colorTheme.id);
+  if (!style) {
+    style = buildColorThemeSyntax(colorTheme);
+    colorThemeSyntaxCache.set(colorTheme.id, style);
+  }
+  return style;
+};

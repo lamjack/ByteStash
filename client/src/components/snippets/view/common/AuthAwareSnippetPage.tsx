@@ -27,6 +27,7 @@ const AuthAwareSnippetView: React.FC = () => {
   const { snippetId } = useParams<{ snippetId: string }>();
   const [snippet, setSnippet] = useState<Snippet | null>(null);
   const [isOwned, setIsOwned] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const [metadata, setMetadata] = useState<SnippetMetadata>(EMPTY_SNIPPET_METADATA);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +36,7 @@ const AuthAwareSnippetView: React.FC = () => {
   const [isEditSnippetModalOpen, setIsEditSnippetModalOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { showLineNumbers } = useSettings();
   const { addToast } = useToast();
   const editSnippetMutation = useEditSnippet();
@@ -50,7 +51,7 @@ const AuthAwareSnippetView: React.FC = () => {
 
   useEffect(() => {
     loadSnippet();
-  }, [snippetId, isAuthenticated]);
+  }, [snippetId, isAuthenticated, user?.id]);
 
   const loadSnippet = async () => {
     if (!snippetId) return;
@@ -60,12 +61,18 @@ const AuthAwareSnippetView: React.FC = () => {
     setTryingPublicAccess(false);
     setRequiresAuth(false);
     setIsOwned(false);
+    setCanEdit(false);
 
     try {
       if (isAuthenticated) {
         const data = await getSnippetById(snippetId);
         setSnippet(data);
-        setIsOwned(true);
+        // Signed-in users can also read public and group snippets. Only the owner may share
+        // or delete; group members may edit when the owner allows it.
+        const owned = data.is_owner ?? data.user_id === user?.id;
+        setIsOwned(owned);
+        // The owner keeps the edit button on read-only snippets so they can unlock them
+        setCanEdit(owned || !!data.can_edit);
         return;
       }
 
@@ -124,10 +131,10 @@ const AuthAwareSnippetView: React.FC = () => {
         id: snippet.id,
         snippet: snippetData,
       });
-      setSnippet(updated ?? { ...snippet, ...snippetData });
+      setSnippet(updated ? { ...updated, is_owner: snippet.is_owner, can_edit: snippet.can_edit } : { ...snippet, ...snippetData });
       addToast(translate("baseSnippetStorage.success.snippetUpdated"), "success");
-    } catch (error) {
-      addToast(translate("baseSnippetStorage.error.snippetUpdated"), "error");
+    } catch (error: any) {
+      addToast(error?.error || translate("baseSnippetStorage.error.snippetUpdated"), "error");
       throw error;
     }
   };
@@ -232,11 +239,11 @@ const AuthAwareSnippetView: React.FC = () => {
           <ArrowLeft size={18} aria-hidden="true" />
           {translate("backToSnippets")}
         </button>
-        {isOwned && snippet && (
+        {canEdit && snippet && (
           <SnippetDetailActions
             onEdit={() => setIsEditSnippetModalOpen(true)}
-            onShare={() => setIsShareOpen(true)}
-            onDelete={() => setIsDeleteConfirmOpen(true)}
+            onShare={isOwned ? () => setIsShareOpen(true) : undefined}
+            onDelete={isOwned ? () => setIsDeleteConfirmOpen(true) : undefined}
           />
         )}
       </div>
@@ -247,16 +254,19 @@ const AuthAwareSnippetView: React.FC = () => {
           onCategoryClick={handleCategoryClick}
         />
       </main>
+      {canEdit && snippet && (
+        <EditSnippetModal
+          isOpen={isEditSnippetModalOpen}
+          onClose={() => setIsEditSnippetModalOpen(false)}
+          onSubmit={handleSnippetSubmit}
+          snippetToEdit={snippet}
+          showLineNumbers={showLineNumbers}
+          allCategories={metadata.categories}
+          isOwner={isOwned}
+        />
+      )}
       {isOwned && snippet && (
         <>
-          <EditSnippetModal
-            isOpen={isEditSnippetModalOpen}
-            onClose={() => setIsEditSnippetModalOpen(false)}
-            onSubmit={handleSnippetSubmit}
-            snippetToEdit={snippet}
-            showLineNumbers={showLineNumbers}
-            allCategories={metadata.categories}
-          />
           <ShareMenu
             snippet={snippet}
             isOpen={isShareOpen}

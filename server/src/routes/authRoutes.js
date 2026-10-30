@@ -1,12 +1,13 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET, TOKEN_EXPIRY, ALLOW_NEW_ACCOUNTS, DISABLE_ACCOUNTS, DISABLE_INTERNAL_ACCOUNTS, getOrCreateAnonymousUser, authenticateToken, ALLOW_PASSWORD_CHANGES } from '../middleware/auth.js';
+import { JWT_SECRET, TOKEN_EXPIRY, DISABLE_ACCOUNTS, DISABLE_INTERNAL_ACCOUNTS, getOrCreateAnonymousUser, authenticateToken, ALLOW_PASSWORD_CHANGES } from '../middleware/auth.js';
 import userService from '../services/userService.js';
 import userRepository from '../repositories/userRepository.js';
 import { getDb } from '../config/database.js';
 import { up_v1_5_0_snippets } from '../config/migrations/20241117-migration.js';
 import { isAdmin } from '../middleware/adminAuth.js';
 import Logger from '../logger.js';
+import appSettingsRepository from '../repositories/appSettingsRepository.js';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.get('/config', async (req, res) => {
     
     res.json({ 
       authRequired: true,
-      allowNewAccounts: !hasUsers || (ALLOW_NEW_ACCOUNTS && !DISABLE_ACCOUNTS),
+      allowNewAccounts: !hasUsers || (appSettingsRepository.isRegistrationOpen() && !DISABLE_ACCOUNTS),
       hasUsers,
       disableAccounts: DISABLE_ACCOUNTS,
       disableInternalAccounts: DISABLE_INTERNAL_ACCOUNTS,
@@ -40,7 +41,7 @@ router.post('/register', async (req, res) => {
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
     const hasUsers = userCount > 0;
     
-    if (hasUsers && !ALLOW_NEW_ACCOUNTS) {
+    if (hasUsers && !appSettingsRepository.isRegistrationOpen()) {
       return res.status(403).json({ error: 'New account registration is disabled' });
     }
 
