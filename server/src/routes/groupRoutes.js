@@ -20,7 +20,17 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Group-only snippets of the user's groups (and their own group-only snippets).
+// People to share a snippet with, matched by username: GET /api/groups/share-users?q=ali
+router.get('/share-users', async (req, res) => {
+  try {
+    res.json(groupRepository.searchUsers(req.query.q, req.user.id));
+  } catch (error) {
+    Logger.error('Error searching users:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+// Snippets shared with the user (directly or via a group) plus their own shared snippets.
 // Same query params as GET /api/snippets, plus `group` to narrow to one group.
 router.get('/snippets', async (req, res) => {
   try {
@@ -30,7 +40,7 @@ router.get('/snippets', async (req, res) => {
 
     const { snippets, total } = await snippetService.getSnippetsPaginated({
       userId: null,
-      groupViewerId: req.user.id,
+      sharedViewerId: req.user.id,
       filters: {
         search: req.query.search || null,
         searchCode: req.query.searchCode === 'true',

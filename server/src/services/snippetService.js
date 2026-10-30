@@ -9,71 +9,124 @@ export class VisibilityError extends Error {
   }
 }
 
-const EDIT_PERMISSIONS = ["owner", "group", "readonly"];
+const EDIT_PERMISSIONS = ["owner", "readonly"];
+const SHARE_PERMISSIONS = ["view", "edit"];
 
 /**
- * Who may change a snippet's content: "owner" (default) only the owner, "group" also
- * members of its group (group-only snippets), "readonly" nobody until the owner unlocks it.
+ * "owner" (default): the owner plus share targets given "edit" may change the content;
+ * "readonly": locked for everyone, the owner included, until the owner unlocks it.
+ * The legacy "group" value is accepted as "owner" (its meaning now lives on each share).
  */
-function resolveEditPermission(snippetData, { isPublic, groupId, existing = null }) {
-  const permission = snippetData.edit_permission ?? existing?.edit_permission ?? "owner";
+function resolveEditPermission(snippetData, { existing = null } = {}) {
+  let permission = snippetData.edit_permission ?? existing?.edit_permission ?? "owner";
+  if (permission === "group") permission = "owner";
   if (!EDIT_PERMISSIONS.includes(permission)) {
     throw new VisibilityError(`Unknown edit permission: ${permission}`);
   }
-  if (permission === "group" && (isPublic || !groupId)) {
-    // Group editing needs a group; fall back for public/private snippets
-    return "owner";
-  }
   return permission;
+}
+
+// Whether userId is one of the snippet's share targets with "edit", directly or via a group.
+function hasEditShare(snippet, userId) {
+  return (snippet.shares || []).some(
+    (share) =>
+      share.permission === "edit" &&
+      (share.type === "user"
+        ? share.id === userId
+        : groupRepository.isMember(share.id, userId))
+  );
 }
 
 export function canEditSnippet(snippet, userId) {
   if (!snippet || snippet.edit_permission === "readonly") return false;
   if (snippet.user_id === userId) return true;
-  return (
-    snippet.edit_permission === "group" &&
-    !snippet.is_public &&
-    !!snippet.group_id &&
-    groupRepository.isMember(snippet.group_id, userId)
-  );
+  return !snippet.is_public && hasEditShare(snippet, userId);
 }
 
 /**
- * Works out is_public / group_id from the request body. Clients send either
- * `visibility` ("public" | "private" | "protected") with `group_id`, or the
- * legacy `is_public` flag. Only admins and members of a group may publish to it.
+ * Normalizes requested share targets to [{ type, id, permission }]. Users may be given by
+ * id or username. Admins can share with any group, others only with groups they belong to
+ * (groups the snippet is already shared with stay allowed).
  */
-function resolveVisibility(snippetData, { userId, isAdmin = false, existing = null }) {
-  let visibility = snippetData.visibility;
-  let groupId = snippetData.group_id ?? null;
+function resolveShareTargets(targets, { userId, isAdmin, existing }) {
+  if (!Array.isArray(targets)) {
+    throw new VisibilityError("share_with must be a list of { type, id, permission }");
+  }
+  const existingGroupIds = new Set(
+    (existing?.shares || []).filter((share) => share.type === "group").map((share) => share.id)
+  );
+  const result = new Map();
 
-  if (!visibility) {
-    if (snippetData.is_public) {
-      visibility = "public";
-    } else if (snippetData.group_id !== undefined) {
-      visibility = groupId ? "protected" : "private";
+  for (const target of targets) {
+    const permission = target?.permission ?? "view";
+    if (!SHARE_PERMISSIONS.includes(permission)) {
+      throw new VisibilityError(`Unknown share permission: ${permission}`);
+    }
+
+    if (target?.type === "group") {
+      const groupId = parseInt(target.id);
+      if (!groupId || !groupRepository.findById(groupId)) {
+        throw new VisibilityError(`Group not found: ${target.id}`);
+      }
+      if (!isAdmin && !existingGroupIds.has(groupId) && !groupRepository.isMember(groupId, userId)) {
+        throw new VisibilityError("You can only share with groups you belong to");
+      }
+      result.set(`group:${groupId}`, { type: "group", id: groupId, permission });
+    } else if (target?.type === "user") {
+      const user = target.id != null
+        ? groupRepository.findUserById(parseInt(target.id))
+        : groupRepository.findUserByUsernameOrEmail(target.username);
+      if (!user) {
+        throw new VisibilityError(`User not found: ${target.id ?? target.username}`);
+      }
+      if (user.id === userId) continue; // the owner always has access
+      result.set(`user:${user.id}`, { type: "user", id: user.id, permission });
     } else {
-      visibility = "private";
+      throw new VisibilityError(`Unknown share target type: ${target?.type}`);
     }
   }
 
-  if (visibility === "public") return { isPublic: 1, groupId: null };
-  if (visibility === "private") return { isPublic: 0, groupId: null };
+  return [...result.values()];
+}
+
+/**
+ * Works out is_public and the share list from the request body. Clients send `visibility`
+ * ("public" | "private" | "protected") with `share_with`, or the legacy `is_public` flag /
+ * single `group_id`. When `share_with` is omitted on update, existing shares are kept.
+ */
+function resolveVisibility(snippetData, { userId, isAdmin = false, existing = null }) {
+  let visibility = snippetData.visibility;
+  let targets = snippetData.share_with;
+
+  if (targets === undefined && snippetData.group_id !== undefined && snippetData.group_id !== null) {
+    // Legacy single-group payload
+    targets = [{
+      type: "group",
+      id: snippetData.group_id,
+      permission: snippetData.edit_permission === "group" ? "edit" : "view",
+    }];
+  }
+
+  if (!visibility) {
+    if (snippetData.is_public) visibility = "public";
+    else if (targets?.length) visibility = "protected";
+    else if (targets === undefined && snippetData.is_public === undefined && existing) visibility = existing.visibility;
+    else visibility = "private";
+  }
+
+  if (visibility === "public") return { isPublic: 1, shares: [] };
+  if (visibility === "private") return { isPublic: 0, shares: [] };
   if (visibility !== "protected") {
     throw new VisibilityError(`Unknown visibility: ${visibility}`);
   }
 
-  groupId = parseInt(groupId);
-  if (!groupId || !groupRepository.findById(groupId)) {
-    throw new VisibilityError("A valid group is required for group-only snippets");
+  const shares = targets === undefined
+    ? (existing?.shares || []).map(({ type, id, permission }) => ({ type, id, permission }))
+    : resolveShareTargets(targets, { userId, isAdmin, existing });
+  if (shares.length === 0) {
+    throw new VisibilityError("Choose at least one group or person to share with");
   }
-
-  const keepsSameGroup = existing && existing.group_id === groupId;
-  if (!isAdmin && !keepsSameGroup && !groupRepository.isMember(groupId, userId)) {
-    throw new VisibilityError("You can only publish to groups you belong to");
-  }
-
-  return { isPublic: 0, groupId };
+  return { isPublic: 0, shares };
 }
 
 class SnippetService {
@@ -109,7 +162,7 @@ class SnippetService {
         ...snippetData,
         userId,
         ...visibility,
-        editPermission: resolveEditPermission(snippetData, visibility),
+        editPermission: resolveEditPermission(snippetData),
       });
       Logger.debug("Service: Created snippet with ID:", result.id);
       return result;
@@ -207,16 +260,16 @@ class SnippetService {
         // The owner controls visibility and edit permission, and may unlock a read-only
         // snippet, but not change its content while it stays read-only.
         const visibility = resolveVisibility(snippetData, { userId, isAdmin, existing });
-        const editPermission = resolveEditPermission(snippetData, { ...visibility, existing });
+        const editPermission = resolveEditPermission(snippetData, { existing });
         if (existing.edit_permission === "readonly" && editPermission === "readonly") {
           throw new VisibilityError("This snippet is locked. Change its edit permission to edit it.", 409);
         }
         settings = { ...visibility, editPermission };
       } else if (canEditSnippet(existing, userId)) {
-        // Group editors change content only; sharing settings stay as the owner set them
+        // Share editors change content only; sharing settings stay as the owner set them
         settings = {
           isPublic: existing.is_public,
-          groupId: existing.group_id,
+          shares: undefined,
           editPermission: existing.edit_permission,
         };
       } else {
@@ -307,7 +360,7 @@ class SnippetService {
     }
   }
 
-  async getSnippetsPaginated({ userId, viewerId = null, groupViewerId = null, filters, sort, limit, offset }) {
+  async getSnippetsPaginated({ userId, viewerId = null, sharedViewerId = null, filters, sort, limit, offset }) {
     try {
       Logger.debug(
         "Service: Getting paginated snippets for user:",
@@ -324,7 +377,7 @@ class SnippetService {
       const result = await snippetRepository.findAllPaginated({
         userId,
         viewerId,
-        groupViewerId,
+        sharedViewerId,
         filters,
         sort,
         limit,
@@ -340,13 +393,13 @@ class SnippetService {
     }
   }
 
-  async getMetadata(userId = null, viewerId = null, groupViewerId = null) {
+  async getMetadata(userId = null, viewerId = null, sharedViewerId = null) {
     try {
       Logger.debug(
         "Service: Getting metadata for",
         userId !== null ? `user: ${userId}` : "public snippets"
       );
-      const result = await snippetRepository.getMetadata(userId, viewerId, groupViewerId);
+      const result = await snippetRepository.getMetadata(userId, viewerId, sharedViewerId);
       Logger.debug(
         `Service: Retrieved ${result.categories.length} categories, ${result.languages.length} languages`
       );

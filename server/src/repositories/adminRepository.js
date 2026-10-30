@@ -84,10 +84,14 @@ class AdminRepository {
     // Toggle snippet public status
     this.statements.toggleSnippetPublic = db.prepare(`
       UPDATE snippets
-      SET is_public = NOT is_public,
-          group_id = CASE WHEN is_public = 0 THEN NULL ELSE group_id END,
-          edit_permission = CASE WHEN is_public = 0 AND edit_permission = 'group' THEN 'owner' ELSE edit_permission END
+      SET is_public = NOT is_public
       WHERE id = ?
+    `);
+
+    // Public snippets have no share targets
+    this.statements.clearSnippetSharesIfPublic = db.prepare(`
+      DELETE FROM snippet_shares
+      WHERE snippet_id = ? AND (SELECT is_public FROM snippets WHERE id = ?) = 1
     `);
 
     // Delete API key
@@ -261,12 +265,10 @@ class AdminRepository {
       let query = `
         SELECT
           s.id, s.title, s.description, s.updated_at, s.is_public,
-          s.group_id, g.name as group_name,
           s.user_id, u.username,
           (SELECT COUNT(*) FROM fragments WHERE snippet_id = s.id) as fragment_count
         FROM snippets s
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE 1=1
       `;
 
@@ -375,7 +377,11 @@ class AdminRepository {
     this.#initializeStatements();
 
     try {
-      const result = this.statements.toggleSnippetPublic.run(snippetId);
+      const result = getDb().transaction(() => {
+        const toggled = this.statements.toggleSnippetPublic.run(snippetId);
+        this.statements.clearSnippetSharesIfPublic.run(snippetId, snippetId);
+        return toggled;
+      })();
       if (result.changes === 0) {
         throw new Error('Snippet not found');
       }

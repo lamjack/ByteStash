@@ -36,5 +36,5 @@
   "pinned": "Pinned",
   "public": "Public",
   "shared": "Shared",
-  "groupOnly": "Group only: {{group}}"
+  "sharedWith": "Shared with {{names}}"
 }

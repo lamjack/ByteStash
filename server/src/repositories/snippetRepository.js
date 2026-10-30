@@ -1,10 +1,10 @@
 import { getDb } from "../config/database.js";
 import Logger from "../logger.js";
-import { getCategoryFacets, GROUP_LISTING_SQL, GROUP_MEMBER_SQL, visibleToViewerSql } from "./snippetMetadata.js";
+import { getCategoryFacets, scopeFilter, SHARED_WITH_VIEWER_SQL } from "./snippetMetadata.js";
 
 export function getVisibility(snippet) {
   if (snippet.is_public) return "public";
-  if (snippet.group_id) return "protected";
+  if (snippet.shares?.length) return "protected";
   return "private";
 }
 
@@ -44,8 +44,6 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
-          s.group_id,
-          g.name as group_name,
           s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
@@ -53,7 +51,6 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.user_id = ? AND s.expiry_date IS NULL
         GROUP BY s.id
         ORDER BY s.updated_at DESC
@@ -69,8 +66,6 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
-          s.group_id,
-          g.name as group_name,
           s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
@@ -78,7 +73,6 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.is_public = 1 AND s.expiry_date IS NULL 
         GROUP BY s.id
         ORDER BY s.updated_at DESC
@@ -92,9 +86,8 @@ class SnippetRepository {
           expiry_date,
           user_id,
           is_public,
-          group_id,
           edit_permission
-        ) VALUES (?, ?, datetime('now', 'utc'),NULL, ?, ?, ?, ?)
+        ) VALUES (?, ?, datetime('now', 'utc'),NULL, ?, ?, ?)
       `);
 
       this.insertFragmentStmt = db.prepare(`
@@ -117,7 +110,6 @@ class SnippetRepository {
             description = ?,
             updated_at = datetime('now', 'utc'),
             is_public = ?,
-            group_id = ?,
             edit_permission = ?
         WHERE id = ?
       `);
@@ -147,8 +139,6 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
-          s.group_id,
-          g.name as group_name,
           s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
@@ -156,7 +146,6 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.user_id = ? AND s.expiry_date IS NOT NULL
         GROUP BY s.id
         ORDER BY s.updated_at DESC
@@ -177,8 +166,6 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
-          s.group_id,
-          g.name as group_name,
           s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
@@ -186,8 +173,7 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
-        WHERE s.id = ? AND (s.user_id = ? OR s.is_public = 1 OR ${GROUP_MEMBER_SQL}) AND s.expiry_date IS NULL
+        WHERE s.id = ? AND (s.user_id = ? OR s.is_public = 1 OR ${SHARED_WITH_VIEWER_SQL}) AND s.expiry_date IS NULL
         GROUP BY s.id
       `);
 
@@ -201,8 +187,6 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
-          s.group_id,
-          g.name as group_name,
           s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
@@ -210,7 +194,6 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.id = ? AND s.is_public = TRUE AND s.expiry_date IS NULL
         GROUP BY s.id
       `);
@@ -240,6 +223,23 @@ class SnippetRepository {
         WHERE id = ? AND user_id = ?
       `);
 
+      this.selectSharesStmt = db.prepare(`
+        SELECT sh.group_id, sh.user_id, sh.permission, g.name as group_name, u.username
+        FROM snippet_shares sh
+        LEFT JOIN user_groups g ON sh.group_id = g.id
+        LEFT JOIN users u ON sh.user_id = u.id
+        WHERE sh.snippet_id = ?
+        ORDER BY sh.group_id IS NULL, COALESCE(g.name, u.username) COLLATE NOCASE
+      `);
+
+      this.deleteSharesStmt = db.prepare(`
+        DELETE FROM snippet_shares WHERE snippet_id = ?
+      `);
+
+      this.insertShareStmt = db.prepare(`
+        INSERT INTO snippet_shares (snippet_id, group_id, user_id, permission) VALUES (?, ?, ?, ?)
+      `);
+
       this.setFavoriteStmt = db.prepare(`
         UPDATE snippets
         SET is_favorite = ?
@@ -252,6 +252,12 @@ class SnippetRepository {
     if (!snippet) return null;
 
     const fragments = this.selectFragmentsStmt.all(snippet.id);
+    const shares = this.selectSharesStmt.all(snippet.id).map((row) =>
+      row.group_id
+        ? { type: "group", id: row.group_id, name: row.group_name, permission: row.permission }
+        : { type: "user", id: row.user_id, name: row.username, permission: row.permission }
+    );
+    snippet = { ...snippet, shares };
 
     return {
       ...snippet,
@@ -260,6 +266,19 @@ class SnippetRepository {
       share_count: snippet.share_count || 0,
       visibility: getVisibility(snippet),
     };
+  }
+
+  // shares: [{ type: "group" | "user", id, permission: "view" | "edit" }]; replaces all existing shares.
+  #replaceShares(snippetId, shares) {
+    this.deleteSharesStmt.run(snippetId);
+    for (const share of shares) {
+      this.insertShareStmt.run(
+        snippetId,
+        share.type === "group" ? share.id : null,
+        share.type === "user" ? share.id : null,
+        share.permission === "edit" ? "edit" : "view"
+      );
+    }
   }
 
   findAll(userId) {
@@ -291,7 +310,7 @@ class SnippetRepository {
     fragments = [],
     userId,
     isPublic = 0,
-    groupId = null,
+    shares = [],
     editPermission = "owner",
   }) {
     this.#initializeStatements();
@@ -304,10 +323,10 @@ class SnippetRepository {
           description,
           userId,
           isPublic ? 1 : 0,
-          isPublic ? null : groupId,
           editPermission
         );
         const snippetId = insertResult.lastInsertRowid;
+        this.#replaceShares(snippetId, isPublic ? [] : shares);
 
         fragments.forEach((fragment, index) => {
           this.insertFragmentStmt.run(
@@ -330,7 +349,7 @@ class SnippetRepository {
           }
         }
 
-        const created = this.selectByIdStmt.get(snippetId, userId, userId);
+        const created = this.selectByIdStmt.get(snippetId, userId, userId, userId);
         return this.#processSnippet(created);
       })();
     } catch (error) {
@@ -341,7 +360,7 @@ class SnippetRepository {
 
   update(
     id,
-    { title, description, categories = [], fragments = [], isPublic = 0, groupId = null, editPermission = "owner" },
+    { title, description, categories = [], fragments = [], isPublic = 0, shares, editPermission = "owner" },
     userId
   ) {
     this.#initializeStatements();
@@ -354,11 +373,13 @@ class SnippetRepository {
           title,
           description,
           isPublic ? 1 : 0,
-          isPublic ? null : groupId,
           editPermission,
           id
         );
         if (result.changes === 0) return null;
+        // shares undefined: leave sharing untouched (e.g. edits by a share editor)
+        if (isPublic) this.#replaceShares(id, []);
+        else if (shares) this.#replaceShares(id, shares);
 
         this.deleteFragmentsStmt.run(id);
         fragments.forEach((fragment, index) => {
@@ -378,7 +399,7 @@ class SnippetRepository {
           }
         }
 
-        const updated = this.selectByIdStmt.get(id, userId, userId);
+        const updated = this.selectByIdStmt.get(id, userId, userId, userId);
         return this.#processSnippet(updated);
       })();
     } catch (error) {
@@ -405,7 +426,7 @@ class SnippetRepository {
     try {
       const db = getDb();
       return db.transaction(() => {
-        const snippet = this.selectByIdStmt.get(id, userId, userId);
+        const snippet = this.selectByIdStmt.get(id, userId, userId, userId);
         if (snippet && snippet.user_id === userId) {
           this.moveToRecycleBinStmt.run(id, userId);
           return this.#processSnippet(snippet);
@@ -459,11 +480,11 @@ class SnippetRepository {
   }
 
   findById(id, userId = null) {
-    // userId given: owner, public, or a member of the snippet's group can read it.
+    // userId given: owner, public, or someone it is shared with can read it.
     this.#initializeStatements();
     try {
       if (userId != null) {
-        const snippet = this.selectByIdStmt.get(id, userId, userId);
+        const snippet = this.selectByIdStmt.get(id, userId, userId, userId);
         return this.#processSnippet(snippet);
       }
 
@@ -480,7 +501,7 @@ class SnippetRepository {
     try {
       const result = this.setPinnedStmt.run(value ? 1 : 0, id, userId);
       if (result.changes === 0) return null;
-      const updated = this.selectByIdStmt.get(id, userId, userId);
+      const updated = this.selectByIdStmt.get(id, userId, userId, userId);
       return this.#processSnippet(updated);
     } catch (error) {
       Logger.error("Error in setPinned:", error);
@@ -495,7 +516,7 @@ class SnippetRepository {
       if (result.changes === 0) {
         return null;
       }
-      const updated = this.selectByIdStmt.get(id, userId, userId);
+      const updated = this.selectByIdStmt.get(id, userId, userId, userId);
       return this.#processSnippet(updated);
     } catch (error) {
       Logger.error("Error in setFavorite:", error);
@@ -506,7 +527,7 @@ class SnippetRepository {
   findAllPaginated({
     userId = null,
     viewerId = null,
-    groupViewerId = null,
+    sharedViewerId = null,
     filters = {},
     sort = 'newest',
     limit = 50,
@@ -527,8 +548,6 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
-          s.group_id,
-          g.name as group_name,
           s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
@@ -537,26 +556,18 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE 1=1
       `;
 
       const params = [];
 
       // Apply filters dynamically
-      if (userId !== null) {
-        sql += ` AND s.user_id = ?`;
-        params.push(userId);
-      } else if (groupViewerId != null) {
-        sql += ` AND ${GROUP_LISTING_SQL}`;
-        params.push(groupViewerId, groupViewerId);
-        if (filters.groupId) {
-          sql += ` AND s.group_id = ?`;
-          params.push(filters.groupId);
-        }
-      } else {
-        sql += ` AND ${visibleToViewerSql(viewerId)}`;
-        if (viewerId != null) params.push(viewerId);
+      const scope = scopeFilter({ userId, viewerId, sharedViewerId });
+      sql += ` AND ${scope.sql}`;
+      params.push(...scope.params);
+      if (sharedViewerId != null && filters.groupId) {
+        sql += ` AND EXISTS (SELECT 1 FROM snippet_shares sh WHERE sh.snippet_id = s.id AND sh.group_id = ?)`;
+        params.push(filters.groupId);
       }
 
       if (filters.recycled) {
@@ -637,13 +648,15 @@ class SnippetRepository {
     }
   }
 
-  getMetadata(userId = null, viewerId = null, groupViewerId = null) {
+  getMetadata(userId = null, viewerId = null, sharedViewerId = null) {
     this.#initializeStatements();
     const db = getDb();
 
     try {
+      const scope = scopeFilter({ userId, viewerId, sharedViewerId });
+
       // Get unique categories
-      const facets = getCategoryFacets(db, userId, viewerId, groupViewerId);
+      const facets = getCategoryFacets(db, userId, viewerId, sharedViewerId);
       const categories = facets.map((facet) => facet.value);
 
       // Get unique languages
@@ -655,16 +668,8 @@ class SnippetRepository {
       `;
       const languageParams = [];
 
-      if (userId !== null) {
-        languageSql += ` AND s.user_id = ?`;
-        languageParams.push(userId);
-      } else if (groupViewerId != null) {
-        languageSql += ` AND ${GROUP_LISTING_SQL}`;
-        languageParams.push(groupViewerId, groupViewerId);
-      } else {
-        languageSql += ` AND ${visibleToViewerSql(viewerId)}`;
-        if (viewerId != null) languageParams.push(viewerId);
-      }
+      languageSql += ` AND ${scope.sql}`;
+      languageParams.push(...scope.params);
       languageSql += ` ORDER BY f.language`;
 
       const languages = db.prepare(languageSql).all(...languageParams).map(r => r.language);
@@ -673,16 +678,8 @@ class SnippetRepository {
       let countSql = `SELECT COUNT(*) as count FROM snippets s WHERE s.expiry_date IS NULL`;
       const countParams = [];
 
-      if (userId !== null) {
-        countSql += ` AND s.user_id = ?`;
-        countParams.push(userId);
-      } else if (groupViewerId != null) {
-        countSql += ` AND ${GROUP_LISTING_SQL}`;
-        countParams.push(groupViewerId, groupViewerId);
-      } else {
-        countSql += ` AND ${visibleToViewerSql(viewerId)}`;
-        if (viewerId != null) countParams.push(viewerId);
-      }
+      countSql += ` AND ${scope.sql}`;
+      countParams.push(...scope.params);
 
       const total = db.prepare(countSql).get(...countParams).count;
 

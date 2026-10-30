@@ -8,8 +8,8 @@ import groupRepository from '../repositories/groupRepository.js';
  * Builds an MCP server instance scoped to a single authenticated ByteStash user.
  *
  * Tools apply the same authorization as the REST API: writes only touch snippets owned
- * by `userId`, and reads also reach public snippets and group-only snippets of groups
- * the user belongs to. An API key never grants access beyond what its owner could
+ * by `userId` (or snippets shared with them with edit permission), and reads also reach
+ * public snippets and snippets shared with the user directly or through a group. An API key never grants access beyond what its owner could
  * already see through the web UI or REST API.
  *
  * A fresh server is created per request (stateless Streamable HTTP transport), so the
@@ -29,7 +29,7 @@ function summarizeSnippet(snippet) {
     description: snippet.description,
     categories: snippet.categories,
     visibility: snippet.visibility,
-    group: snippet.group_id ? { id: snippet.group_id, name: snippet.group_name } : null,
+    shared_with: snippet.shares || [],
     owner: snippet.username,
     is_public: !!snippet.is_public,
     is_favorite: !!snippet.is_favorite,
@@ -49,7 +49,7 @@ function fullSnippet(snippet) {
     description: snippet.description,
     categories: snippet.categories,
     visibility: snippet.visibility,
-    group: snippet.group_id ? { id: snippet.group_id, name: snippet.group_name } : null,
+    shared_with: snippet.shares || [],
     owner: snippet.username,
     edit_permission: snippet.edit_permission,
     can_edit: snippet.can_edit,
@@ -68,12 +68,23 @@ function fullSnippet(snippet) {
 }
 
 const editPermissionSchema = z
-  .enum(['owner', 'group', 'readonly'])
-  .describe('owner: only you can edit; group: members of the snippet\'s group can edit (group-only snippets); readonly: locked for everyone');
+  .enum(['owner', 'readonly'])
+  .describe('owner (default): you plus share targets with "edit" permission can edit; readonly: locked for everyone, you included');
 
 const visibilitySchema = z
   .enum(['private', 'public', 'protected'])
-  .describe('private: only you; public: anyone; protected: members of group_id only (see list_groups)');
+  .describe('private: only you; public: anyone; protected: only the groups and people in share_with');
+
+const shareWithSchema = z
+  .array(
+    z.object({
+      type: z.enum(['group', 'user']),
+      id: z.coerce.number().int().optional().describe('Group id (see list_groups) or user id'),
+      username: z.string().optional().describe('For type "user": username instead of id'),
+      permission: z.enum(['view', 'edit']).optional().describe('view (default) or edit'),
+    })
+  )
+  .describe('Who a protected snippet is shared with. On update, replaces the current list.');
 
 // Visibility errors (e.g. publishing to a group you are not in) are safe to show the client.
 function errorMessage(error, fallback) {
@@ -95,7 +106,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
       instructions:
         'ByteStash is a code-snippet manager. Use these tools to search, read, create, ' +
         'update and delete the authenticated user\'s code snippets, and to read snippets shared ' +
-        'with them (public, or group-only for their groups). Each snippet has a title, ' +
+        'with them (public, or shared with them directly or through a group). Each snippet has a title, ' +
         'description, categories (tags), and one or more file "fragments" (each with a file name, ' +
         'language and code). Start with list_snippets or list_metadata to discover what exists.',
     }
@@ -112,7 +123,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
         scope: z
           .enum(['mine', 'shared'])
           .optional()
-          .describe('mine (default): your own snippets; shared: public snippets plus group-only snippets of your groups'),
+          .describe('mine (default): your own snippets; shared: public snippets plus snippets shared with you'),
         search: z.string().optional().describe('Free-text search over title, description and (by default) code'),
         searchCode: z.boolean().optional().describe('Whether search also matches code content (default true)'),
         language: z.string().optional().describe('Only snippets containing a fragment in this language'),
@@ -195,7 +206,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
         fragments: z.array(fragmentInputSchema).min(1).describe('One or more code files'),
         is_public: z.boolean().optional().describe('Deprecated, use visibility. Whether the snippet is publicly visible (default false)'),
         visibility: visibilitySchema.optional(),
-        group_id: z.coerce.number().int().optional().describe('Group id, required when visibility is protected'),
+        share_with: shareWithSchema.optional(),
         edit_permission: editPermissionSchema.optional(),
       },
     },
@@ -214,7 +225,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
             })),
             is_public: args.is_public ? 1 : 0,
             visibility: args.visibility,
-            group_id: args.group_id,
+            share_with: args.share_with,
             edit_permission: args.edit_permission,
           },
           userId,
@@ -235,8 +246,8 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
       description:
         'Update an existing snippet. Only the fields you provide are changed; omitted fields keep ' +
         'their current values. Providing "fragments" or "categories" replaces them entirely. ' +
-        'Group members may edit content of snippets whose edit_permission is "group"; only the ' +
-        'owner can change visibility or edit_permission.',
+        'People a snippet is shared with using "edit" permission may edit its content; only the ' +
+        'owner can change visibility, share_with or edit_permission.',
       inputSchema: {
         id: z.coerce.number().int().describe('The snippet id to update'),
         title: z.string().min(1).optional().describe('New title'),
@@ -245,7 +256,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
         fragments: z.array(fragmentInputSchema).min(1).optional().describe('Replacement set of code files'),
         is_public: z.boolean().optional().describe('Deprecated, use visibility. New public visibility'),
         visibility: visibilitySchema.optional(),
-        group_id: z.coerce.number().int().optional().describe('Group id, required when visibility is protected'),
+        share_with: shareWithSchema.optional(),
         edit_permission: editPermissionSchema.optional(),
       },
     },
@@ -260,7 +271,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
         if (!visibility && args.is_public !== undefined) {
           visibility = args.is_public ? 'public' : 'private';
         }
-        visibility = visibility ?? existing.visibility;
+        if (!visibility && args.share_with) visibility = 'protected';
 
         const fragments = args.fragments
           ? args.fragments.map((f, i) => ({
@@ -278,8 +289,9 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
             description: args.description ?? existing.description,
             categories: args.categories ?? existing.categories,
             fragments,
+            // Omitted visibility/share_with keep their current values
             visibility,
-            group_id: args.group_id ?? existing.group_id ?? null,
+            share_with: args.share_with,
             edit_permission: args.edit_permission,
           },
           userId,
@@ -334,7 +346,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
     'list_groups',
     {
       title: 'List groups',
-      description: 'List the groups you can publish group-only (protected) snippets to.',
+      description: 'List the groups you can share protected snippets with.',
       inputSchema: {},
     },
     async () => {
@@ -346,6 +358,25 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
       } catch (error) {
         Logger.error('MCP list_groups failed:', error);
         return fail('Failed to list groups');
+      }
+    }
+  );
+
+  server.registerTool(
+    'find_users',
+    {
+      title: 'Find users',
+      description: 'Find people to share a snippet with, by part of their username.',
+      inputSchema: {
+        query: z.string().min(1).describe('Part of a username'),
+      },
+    },
+    async (args) => {
+      try {
+        return ok(groupRepository.searchUsers(args.query, userId));
+      } catch (error) {
+        Logger.error('MCP find_users failed:', error);
+        return fail('Failed to find users');
       }
     }
   );

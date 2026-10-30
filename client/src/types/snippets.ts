@@ -21,15 +21,30 @@ export interface Snippet {
   username?: string;
   user_id?: number;
   visibility?: SnippetVisibility;
-  group_id?: number | null;
-  group_name?: string | null;
+  shares?: ShareTarget[];
   edit_permission?: EditPermission;
   // Only on single-snippet reads for a signed-in viewer
   is_owner?: boolean;
   can_edit?: boolean;
 }
 
-export type EditPermission = 'owner' | 'group' | 'readonly';
+// 'owner': the owner plus share targets with 'edit'; 'readonly': locked for everyone
+export type EditPermission = 'owner' | 'readonly';
+
+export type SharePermission = 'view' | 'edit';
+
+// A group or person a 'protected' snippet is shared with
+export interface ShareTarget {
+  type: 'group' | 'user';
+  id: number;
+  name?: string;
+  permission: SharePermission;
+}
+
+export interface ShareUser {
+  id: number;
+  username: string;
+}
 
 export type SnippetVisibility = 'public' | 'private' | 'protected';
 

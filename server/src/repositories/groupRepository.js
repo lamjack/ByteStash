@@ -13,7 +13,7 @@ class GroupRepository {
           g.created_at,
           (SELECT COUNT(*) FROM user_group_members m WHERE m.group_id = g.id) as member_count,
           (SELECT COUNT(*) FROM user_group_invites i WHERE i.group_id = g.id) as invite_count,
-          (SELECT COUNT(*) FROM snippets s WHERE s.group_id = g.id AND s.is_public = 0) as snippet_count
+          (SELECT COUNT(*) FROM snippet_shares sh WHERE sh.group_id = g.id) as snippet_count
         FROM user_groups g
         ORDER BY g.name COLLATE NOCASE
       `)
@@ -50,7 +50,7 @@ class GroupRepository {
     return result.changes > 0 ? this.findById(id) : null;
   }
 
-  // Snippets published to a deleted group fall back to private (group_id -> NULL).
+  // Shares with a deleted group go away; a snippet left with no shares is private again.
   delete(id) {
     return getDb().prepare('DELETE FROM user_groups WHERE id = ?').run(id).changes > 0;
   }
@@ -101,6 +101,25 @@ class GroupRepository {
     return getDb()
       .prepare('DELETE FROM user_group_invites WHERE group_id = ? AND email = ?')
       .run(groupId, normalizeEmail(email)).changes > 0;
+  }
+
+  // People a snippet can be shared with: username matches (no emails exposed), excluding the searcher.
+  searchUsers(query, excludeUserId, limit = 10) {
+    const value = (query || '').trim().toLowerCase();
+    if (!value) return [];
+    const escaped = value.replace(/[\\%_]/g, (c) => `\\${c}`);
+    return getDb()
+      .prepare(`
+        SELECT id, username FROM users
+        WHERE id != 0 AND id != ? AND username_normalized LIKE ? ESCAPE '\\'
+        ORDER BY CASE WHEN username_normalized LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, username COLLATE NOCASE
+        LIMIT ?
+      `)
+      .all(excludeUserId, `%${escaped}%`, `${escaped}%`, limit);
+  }
+
+  findUserById(id) {
+    return getDb().prepare('SELECT id, username FROM users WHERE id = ? AND id != 0').get(id);
   }
 
   findUserByUsernameOrEmail(identifier) {
