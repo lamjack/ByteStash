@@ -41,8 +41,7 @@ router.get('/', async (req, res) => {
     const { limit, offset, filters, sort } = parseQueryParams(req.query);
 
     const { snippets, total } = await snippetService.getSnippetsPaginated({
-      userId: null,  // null = public listing (plus the viewer's group snippets when signed in)
-      viewerId: req.user?.id ?? null,
+      userId: null,  // null = public only (group snippets are listed under /api/groups/snippets)
       filters,
       sort,
       limit,
@@ -66,7 +65,7 @@ router.get('/', async (req, res) => {
 
 router.get('/metadata', async (req, res) => {
   try {
-    const metadata = await snippetService.getMetadata(null, req.user?.id ?? null);
+    const metadata = await snippetService.getMetadata(null);
     res.json(metadata);
   } catch (error) {
     Logger.error('Error fetching public metadata:', error);

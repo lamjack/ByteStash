@@ -31,7 +31,7 @@ export interface SnippetFilters {
 }
 
 export interface SnippetsQueryKey extends SnippetFilters {
-  viewType: 'base' | 'public' | 'recycle';
+  viewType: 'base' | 'public' | 'group' | 'recycle';
 }
 
 export const snippetKeys = {
@@ -59,6 +59,9 @@ export const useSnippetsInfiniteQuery = (filters: SnippetsQueryKey) => {
 
       if (filters.viewType === 'public') {
         return snippetService.getPublicSnippetsPaginated(params);
+      }
+      if (filters.viewType === 'group') {
+        return snippetService.getGroupSnippetsPaginated(params);
       }
       return snippetService.getSnippetsPaginated(params);
     },

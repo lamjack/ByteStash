@@ -1,6 +1,6 @@
 import { getDb } from "../config/database.js";
 import Logger from "../logger.js";
-import { getCategoryFacets, GROUP_MEMBER_SQL, visibleToViewerSql } from "./snippetMetadata.js";
+import { getCategoryFacets, GROUP_LISTING_SQL, GROUP_MEMBER_SQL, visibleToViewerSql } from "./snippetMetadata.js";
 
 export function getVisibility(snippet) {
   if (snippet.is_public) return "public";
@@ -506,6 +506,7 @@ class SnippetRepository {
   findAllPaginated({
     userId = null,
     viewerId = null,
+    groupViewerId = null,
     filters = {},
     sort = 'newest',
     limit = 50,
@@ -546,6 +547,13 @@ class SnippetRepository {
       if (userId !== null) {
         sql += ` AND s.user_id = ?`;
         params.push(userId);
+      } else if (groupViewerId != null) {
+        sql += ` AND ${GROUP_LISTING_SQL}`;
+        params.push(groupViewerId, groupViewerId);
+        if (filters.groupId) {
+          sql += ` AND s.group_id = ?`;
+          params.push(filters.groupId);
+        }
       } else {
         sql += ` AND ${visibleToViewerSql(viewerId)}`;
         if (viewerId != null) params.push(viewerId);
@@ -629,13 +637,13 @@ class SnippetRepository {
     }
   }
 
-  getMetadata(userId = null, viewerId = null) {
+  getMetadata(userId = null, viewerId = null, groupViewerId = null) {
     this.#initializeStatements();
     const db = getDb();
 
     try {
       // Get unique categories
-      const facets = getCategoryFacets(db, userId, viewerId);
+      const facets = getCategoryFacets(db, userId, viewerId, groupViewerId);
       const categories = facets.map((facet) => facet.value);
 
       // Get unique languages
@@ -650,6 +658,9 @@ class SnippetRepository {
       if (userId !== null) {
         languageSql += ` AND s.user_id = ?`;
         languageParams.push(userId);
+      } else if (groupViewerId != null) {
+        languageSql += ` AND ${GROUP_LISTING_SQL}`;
+        languageParams.push(groupViewerId, groupViewerId);
       } else {
         languageSql += ` AND ${visibleToViewerSql(viewerId)}`;
         if (viewerId != null) languageParams.push(viewerId);
@@ -665,6 +676,9 @@ class SnippetRepository {
       if (userId !== null) {
         countSql += ` AND s.user_id = ?`;
         countParams.push(userId);
+      } else if (groupViewerId != null) {
+        countSql += ` AND ${GROUP_LISTING_SQL}`;
+        countParams.push(groupViewerId, groupViewerId);
       } else {
         countSql += ` AND ${visibleToViewerSql(viewerId)}`;
         if (viewerId != null) countParams.push(viewerId);

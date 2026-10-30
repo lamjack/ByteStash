@@ -1,13 +1,23 @@
 import React from 'react';
-import { Globe, Lock } from 'lucide-react';
+import { Globe, Lock, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+export type StorageView = 'private' | 'public' | 'group';
+
 interface ViewSwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
+  value: StorageView;
+  onChange: (value: StorageView) => void;
+  // The group view needs a signed-in user
+  showGroup?: boolean;
 }
 
-const ViewSwitch: React.FC<ViewSwitchProps> = ({ checked, onChange }) => {
+const OPTIONS: { value: StorageView; icon: typeof Lock; activeColor: string }[] = [
+  { value: 'private', icon: Lock, activeColor: 'text-emerald-500' },
+  { value: 'public', icon: Globe, activeColor: 'text-light-primary dark:text-dark-primary' },
+  { value: 'group', icon: Users, activeColor: 'text-amber-500' },
+];
+
+const ViewSwitch: React.FC<ViewSwitchProps> = ({ value, onChange, showGroup = false }) => {
   const { t: translate } = useTranslation('components/snippets/view/common');
 
   return (
@@ -16,48 +26,33 @@ const ViewSwitch: React.FC<ViewSwitchProps> = ({ checked, onChange }) => {
         className="flex gap-0.5 rounded-lg bg-light-surface dark:bg-dark-surface px-0.5 py-0.5 w-full"
         role="group"
       >
-        <button
-          type="button"
-          onClick={() => onChange(false)}
-          aria-pressed={!checked}
-          className={`
-            flex items-center justify-center gap-1 px-2 py-0.5 rounded-md transition-all duration-200 flex-1
-            ${!checked 
-              ? 'bg-light-hover dark:bg-dark-hover' 
-              : 'hover:bg-light-hover/50 dark:hover:bg-dark-hover/50'
-            }
-          `}
-        >
-          <Lock 
-            className={`
-              stroke-[2] transition-colors duration-200
-              ${!checked ? 'text-emerald-500' : 'text-light-text/50 dark:text-dark-text/50'}
-            `} 
-            size={14} 
-          />
-          <span className="text-xs font-medium">{translate('viewSwitch.private')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange(true)}
-          aria-pressed={checked}
-          className={`
-            flex items-center justify-center gap-1 px-2 py-0.5 rounded-md transition-all duration-200 flex-1
-            ${checked 
-              ? 'bg-light-hover dark:bg-dark-hover' 
-              : 'hover:bg-light-hover/50 dark:hover:bg-dark-hover/50'
-            }
-          `}
-        >
-          <Globe 
-            className={`
-              stroke-[2] transition-colors duration-200
-              ${checked ? 'text-light-primary dark:text-dark-primary' : 'text-light-text/50 dark:text-dark-text/50'}
-            `} 
-            size={14} 
-          />
-          <span className="text-xs font-medium">{translate('viewSwitch.public')}</span>
-        </button>
+        {OPTIONS.filter((option) => showGroup || option.value !== 'group').map(({ value: option, icon: Icon, activeColor }) => {
+          const selected = value === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onChange(option)}
+              aria-pressed={selected}
+              className={`
+                flex items-center justify-center gap-1 px-2 py-0.5 rounded-md transition-all duration-200 flex-1
+                ${selected
+                  ? 'bg-light-hover dark:bg-dark-hover'
+                  : 'hover:bg-light-hover/50 dark:hover:bg-dark-hover/50'
+                }
+              `}
+            >
+              <Icon
+                className={`
+                  stroke-[2] transition-colors duration-200
+                  ${selected ? activeColor : 'text-light-text/50 dark:text-dark-text/50'}
+                `}
+                size={14}
+              />
+              <span className="text-xs font-medium">{translate(`viewSwitch.${option}`)}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

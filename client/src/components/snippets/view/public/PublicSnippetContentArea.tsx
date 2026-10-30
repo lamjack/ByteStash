@@ -23,6 +23,7 @@ interface PublicSnippetContentAreaProps {
   showLineNumbers: boolean;
   isAuthenticated: boolean;
   onCategoryClick: (category: string) => void;
+  viewType?: "public" | "group";
 }
 
 const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
@@ -35,6 +36,7 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
   showLineNumbers,
   isAuthenticated,
   onCategoryClick,
+  viewType = "public",
 }) => {
   const { t: translate } = useTranslation('components/snippets/view/public');
   const [searchParams] = useSearchParams();
@@ -48,8 +50,8 @@ const PublicSnippetContentArea: React.FC<PublicSnippetContentAreaProps> = ({
     language: searchParams.get("language") || undefined,
     category: searchParams.get("categories") || undefined,
     sort: searchParams.get("sort") || "newest",
-    viewType: "public",
-  }), [searchParams, includeCodeInSearch]);
+    viewType,
+  }), [searchParams, includeCodeInSearch, viewType]);
 
   const {
     data,

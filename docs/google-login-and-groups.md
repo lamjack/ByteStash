@@ -34,7 +34,7 @@ Every snippet has one of three visibilities, chosen in the edit dialog:
 Admins manage groups under **Admin → Groups**: create, rename or delete a group, and add or remove members by username or email.
 
 - Admins can publish to any group. Other users can publish only to groups they belong to.
-- Group members see group-only snippets on the **Public** page next to public snippets, once signed in.
+- Signed-in users have a **Group** tab next to Private and Public (`/group/snippets`). It lists group-only snippets of their groups and the ones they published to a group. The Public tab shows public snippets only.
 - Adding an email that has no account yet creates an **invite**. That person may sign in with Google even while registration is closed, and joins the group on first sign-in (the email must be verified by the provider).
 - Deleting a group turns its snippets back to private.
 
@@ -46,7 +46,7 @@ When a snippet is "Group only", the edit dialog expands so the owner can pick th
 | --- | --- |
 | Only me (default) | The owner |
 | Group members | The owner and members of the snippet's group. Only for group-only snippets. Members can change the title, description, categories and files; visibility, edit permission, sharing and deleting stay with the owner. |
-| Read-only | Nobody, including the owner. The owner can switch to another option to unlock it. |
+| Locked | Nobody, including the owner. The owner can switch to another option to unlock it. |
 
 ## MCP
 

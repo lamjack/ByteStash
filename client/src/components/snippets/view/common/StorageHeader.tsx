@@ -3,24 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ROUTES } from '../../../../constants/routes';
 import { AppHeader } from '../../../common/layout/AppHeader';
-import ViewSwitch from './ViewSwitch';
+import ViewSwitch, { type StorageView } from './ViewSwitch';
+import { useAuth } from '../../../../hooks/useAuth';
 
 interface StorageHeaderProps {
   isPublicView: boolean;
+  isGroupView?: boolean;
 }
 
-const StorageHeader: React.FC<StorageHeaderProps> = ({ isPublicView }) => {
+const VIEW_ROUTES: Record<StorageView, string> = {
+  private: ROUTES.HOME,
+  public: ROUTES.PUBLIC_SNIPPETS,
+  group: ROUTES.GROUP_SNIPPETS,
+};
+
+const StorageHeader: React.FC<StorageHeaderProps> = ({ isPublicView, isGroupView = false }) => {
+  const { isAuthenticated } = useAuth();
+  const view: StorageView = isGroupView ? 'group' : isPublicView ? 'public' : 'private';
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const navigate = useNavigate();
   const { t: translate } = useTranslation('components/snippets/view/common');
 
-  const tooltipText = isPublicView
-    ? translate('storageHeader.public')
-    : translate('storageHeader.private');
-
-  const handleViewToggle = (checked: boolean) => {
-    navigate(checked ? ROUTES.PUBLIC_SNIPPETS : ROUTES.HOME);
-  };
+  const tooltipText = translate(`storageHeader.${view}`);
 
   return (
     <AppHeader>
@@ -29,7 +33,7 @@ const StorageHeader: React.FC<StorageHeaderProps> = ({ isPublicView }) => {
         onMouseEnter={() => setIsTooltipVisible(true)}
         onMouseLeave={() => setIsTooltipVisible(false)}
       >
-        <ViewSwitch checked={isPublicView} onChange={handleViewToggle} />
+        <ViewSwitch value={view} onChange={(next) => navigate(VIEW_ROUTES[next])} showGroup={isAuthenticated} />
 
         {isTooltipVisible && (
           <div

@@ -51,6 +51,21 @@ const AuthenticatedApp: React.FC = () => {
   return <SnippetStorage />;
 };
 
+// Group-only snippets need a signed-in user to know which groups to show
+const GroupSnippetsRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  return <PublicSnippetStorage mode="group" />;
+};
+
 const EmbedViewWrapper: React.FC = () => {
   const { shareId } = useParams();
   const searchParams = new URLSearchParams(window.location.search);
@@ -98,6 +113,7 @@ const App: React.FC = () => {
                     <Route path={ROUTES.LOGOUT_CALLBACK} element={<OIDCLogoutCallback />} />
                     <Route path={ROUTES.SHARED_SNIPPET} element={<SharedSnippetView />} />
                     <Route path={ROUTES.PUBLIC_SNIPPETS} element={<PublicSnippetStorage />} />
+                    <Route path={ROUTES.GROUP_SNIPPETS} element={<GroupSnippetsRoute />} />
                     <Route path={ROUTES.RECYCLE} element={<RecycleSnippetStorage />} />
                     <Route path={ROUTES.EMBED} element={<EmbedViewWrapper />} />
                     <Route path={ROUTES.SNIPPET} element={<SnippetPage />} />
