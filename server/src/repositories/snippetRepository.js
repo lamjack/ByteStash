@@ -46,6 +46,7 @@ class SnippetRepository {
           s.is_favorite,
           s.group_id,
           g.name as group_name,
+          s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
@@ -70,6 +71,7 @@ class SnippetRepository {
           s.is_favorite,
           s.group_id,
           g.name as group_name,
+          s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
@@ -90,8 +92,9 @@ class SnippetRepository {
           expiry_date,
           user_id,
           is_public,
-          group_id
-        ) VALUES (?, ?, datetime('now', 'utc'),NULL, ?, ?, ?)
+          group_id,
+          edit_permission
+        ) VALUES (?, ?, datetime('now', 'utc'),NULL, ?, ?, ?, ?)
       `);
 
       this.insertFragmentStmt = db.prepare(`
@@ -114,8 +117,9 @@ class SnippetRepository {
             description = ?,
             updated_at = datetime('now', 'utc'),
             is_public = ?,
-            group_id = ?
-        WHERE id = ? AND user_id = ?
+            group_id = ?,
+            edit_permission = ?
+        WHERE id = ?
       `);
 
       this.restoreSnippetStmt = db.prepare(`
@@ -125,23 +129,11 @@ class SnippetRepository {
       `);
 
       this.deleteFragmentsStmt = db.prepare(`
-        DELETE FROM fragments 
-        WHERE snippet_id = ? 
-        AND EXISTS (
-          SELECT 1 FROM snippets 
-          WHERE snippets.id = fragments.snippet_id 
-          AND snippets.user_id = ?
-        )
+        DELETE FROM fragments WHERE snippet_id = ?
       `);
 
       this.deleteCategoriesStmt = db.prepare(`
-        DELETE FROM categories 
-        WHERE snippet_id = ?
-        AND EXISTS (
-          SELECT 1 FROM snippets 
-          WHERE snippets.id = categories.snippet_id 
-          AND snippets.user_id = ?
-        )
+        DELETE FROM categories WHERE snippet_id = ?
       `);
 
       this.selectAllDeletedStmt = db.prepare(`
@@ -157,6 +149,7 @@ class SnippetRepository {
           s.is_favorite,
           s.group_id,
           g.name as group_name,
+          s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
@@ -186,6 +179,7 @@ class SnippetRepository {
           s.is_favorite,
           s.group_id,
           g.name as group_name,
+          s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
@@ -209,6 +203,7 @@ class SnippetRepository {
           s.is_favorite,
           s.group_id,
           g.name as group_name,
+          s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
@@ -297,6 +292,7 @@ class SnippetRepository {
     userId,
     isPublic = 0,
     groupId = null,
+    editPermission = "owner",
   }) {
     this.#initializeStatements();
     try {
@@ -308,7 +304,8 @@ class SnippetRepository {
           description,
           userId,
           isPublic ? 1 : 0,
-          isPublic ? null : groupId
+          isPublic ? null : groupId,
+          editPermission
         );
         const snippetId = insertResult.lastInsertRowid;
 
@@ -344,7 +341,7 @@ class SnippetRepository {
 
   update(
     id,
-    { title, description, categories = [], fragments = [], isPublic = 0, groupId = null },
+    { title, description, categories = [], fragments = [], isPublic = 0, groupId = null, editPermission = "owner" },
     userId
   ) {
     this.#initializeStatements();
@@ -352,18 +349,18 @@ class SnippetRepository {
       const db = getDb();
 
       return db.transaction(() => {
-        // Readers of public/group snippets reach here too; only the owner may write.
+        // Callers must check edit permission first (see SnippetService.updateSnippet).
         const result = this.updateSnippetStmt.run(
           title,
           description,
           isPublic ? 1 : 0,
           isPublic ? null : groupId,
-          id,
-          userId
+          editPermission,
+          id
         );
         if (result.changes === 0) return null;
 
-        this.deleteFragmentsStmt.run(id, userId);
+        this.deleteFragmentsStmt.run(id);
         fragments.forEach((fragment, index) => {
           this.insertFragmentStmt.run(
             id,
@@ -374,7 +371,7 @@ class SnippetRepository {
           );
         });
 
-        this.deleteCategoriesStmt.run(id, userId);
+        this.deleteCategoriesStmt.run(id);
         for (const category of categories) {
           if (category.trim()) {
             this.insertCategoryStmt.run(id, category.trim().toLowerCase());
@@ -531,6 +528,7 @@ class SnippetRepository {
           s.is_favorite,
           s.group_id,
           g.name as group_name,
+          s.edit_permission,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count,

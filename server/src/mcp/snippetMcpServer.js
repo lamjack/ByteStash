@@ -51,6 +51,8 @@ function fullSnippet(snippet) {
     visibility: snippet.visibility,
     group: snippet.group_id ? { id: snippet.group_id, name: snippet.group_name } : null,
     owner: snippet.username,
+    edit_permission: snippet.edit_permission,
+    can_edit: snippet.can_edit,
     is_public: !!snippet.is_public,
     is_favorite: !!snippet.is_favorite,
     is_pinned: !!snippet.is_pinned,
@@ -65,13 +67,17 @@ function fullSnippet(snippet) {
   };
 }
 
+const editPermissionSchema = z
+  .enum(['owner', 'group', 'readonly'])
+  .describe('owner: only you can edit; group: members of the snippet\'s group can edit (group-only snippets); readonly: locked for everyone');
+
 const visibilitySchema = z
   .enum(['private', 'public', 'protected'])
   .describe('private: only you; public: anyone; protected: members of group_id only (see list_groups)');
 
 // Visibility errors (e.g. publishing to a group you are not in) are safe to show the client.
 function errorMessage(error, fallback) {
-  return error?.status === 400 ? error.message : fallback;
+  return [400, 404, 409].includes(error?.status) ? error.message : fallback;
 }
 
 function ok(data) {
@@ -190,6 +196,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
         is_public: z.boolean().optional().describe('Deprecated, use visibility. Whether the snippet is publicly visible (default false)'),
         visibility: visibilitySchema.optional(),
         group_id: z.coerce.number().int().optional().describe('Group id, required when visibility is protected'),
+        edit_permission: editPermissionSchema.optional(),
       },
     },
     async (args) => {
@@ -208,6 +215,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
             is_public: args.is_public ? 1 : 0,
             visibility: args.visibility,
             group_id: args.group_id,
+            edit_permission: args.edit_permission,
           },
           userId,
           { isAdmin }
@@ -226,7 +234,9 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
       title: 'Update a snippet',
       description:
         'Update an existing snippet. Only the fields you provide are changed; omitted fields keep ' +
-        'their current values. Providing "fragments" or "categories" replaces them entirely.',
+        'their current values. Providing "fragments" or "categories" replaces them entirely. ' +
+        'Group members may edit content of snippets whose edit_permission is "group"; only the ' +
+        'owner can change visibility or edit_permission.',
       inputSchema: {
         id: z.coerce.number().int().describe('The snippet id to update'),
         title: z.string().min(1).optional().describe('New title'),
@@ -236,13 +246,14 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
         is_public: z.boolean().optional().describe('Deprecated, use visibility. New public visibility'),
         visibility: visibilitySchema.optional(),
         group_id: z.coerce.number().int().optional().describe('Group id, required when visibility is protected'),
+        edit_permission: editPermissionSchema.optional(),
       },
     },
     async (args) => {
       try {
         const existing = await snippetService.findById(args.id, userId);
-        if (!existing || existing.user_id !== userId) {
-          return fail(`Snippet ${args.id} not found or not owned by you`);
+        if (!existing) {
+          return fail(`Snippet ${args.id} not found`);
         }
 
         let visibility = args.visibility;
@@ -269,6 +280,7 @@ export function createMcpServer(userId, { isAdmin = false } = {}) {
             fragments,
             visibility,
             group_id: args.group_id ?? existing.group_id ?? null,
+            edit_permission: args.edit_permission,
           },
           userId,
           { isAdmin }

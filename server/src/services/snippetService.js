@@ -3,10 +3,39 @@ import snippetRepository from "../repositories/snippetRepository.js";
 import groupRepository from "../repositories/groupRepository.js";
 
 export class VisibilityError extends Error {
-  constructor(message) {
+  constructor(message, status = 400) {
     super(message);
-    this.status = 400;
+    this.status = status;
   }
+}
+
+const EDIT_PERMISSIONS = ["owner", "group", "readonly"];
+
+/**
+ * Who may change a snippet's content: "owner" (default) only the owner, "group" also
+ * members of its group (group-only snippets), "readonly" nobody until the owner unlocks it.
+ */
+function resolveEditPermission(snippetData, { isPublic, groupId, existing = null }) {
+  const permission = snippetData.edit_permission ?? existing?.edit_permission ?? "owner";
+  if (!EDIT_PERMISSIONS.includes(permission)) {
+    throw new VisibilityError(`Unknown edit permission: ${permission}`);
+  }
+  if (permission === "group" && (isPublic || !groupId)) {
+    // Group editing needs a group; fall back for public/private snippets
+    return "owner";
+  }
+  return permission;
+}
+
+export function canEditSnippet(snippet, userId) {
+  if (!snippet || snippet.edit_permission === "readonly") return false;
+  if (snippet.user_id === userId) return true;
+  return (
+    snippet.edit_permission === "group" &&
+    !snippet.is_public &&
+    !!snippet.group_id &&
+    groupRepository.isMember(snippet.group_id, userId)
+  );
 }
 
 /**
@@ -75,10 +104,12 @@ class SnippetService {
   async createSnippet(snippetData, userId, { isAdmin = false } = {}) {
     try {
       Logger.debug("Service: Creating new snippet for user:", userId);
+      const visibility = resolveVisibility(snippetData, { userId, isAdmin });
       const result = await snippetRepository.create({
         ...snippetData,
         userId,
-        ...resolveVisibility(snippetData, { userId, isAdmin }),
+        ...visibility,
+        editPermission: resolveEditPermission(snippetData, visibility),
       });
       Logger.debug("Service: Created snippet with ID:", result.id);
       return result;
@@ -169,12 +200,33 @@ class SnippetService {
     try {
       Logger.debug("Service: Updating snippet:", id, "for user:", userId);
       const existing = snippetRepository.findById(id, userId);
+      if (!existing) return null;
+
+      let settings;
+      if (existing.user_id === userId) {
+        // The owner controls visibility and edit permission, and may unlock a read-only
+        // snippet, but not change its content while it stays read-only.
+        const visibility = resolveVisibility(snippetData, { userId, isAdmin, existing });
+        const editPermission = resolveEditPermission(snippetData, { ...visibility, existing });
+        if (existing.edit_permission === "readonly" && editPermission === "readonly") {
+          throw new VisibilityError("This snippet is read-only. Change its edit permission to edit it.", 409);
+        }
+        settings = { ...visibility, editPermission };
+      } else if (canEditSnippet(existing, userId)) {
+        // Group editors change content only; sharing settings stay as the owner set them
+        settings = {
+          isPublic: existing.is_public,
+          groupId: existing.group_id,
+          editPermission: existing.edit_permission,
+        };
+      } else {
+        // 404 rather than 403: the web client treats 403 as an expired session
+        throw new VisibilityError("You do not have permission to edit this snippet", 404);
+      }
+
       const result = await snippetRepository.update(
         id,
-        {
-          ...snippetData,
-          ...resolveVisibility(snippetData, { userId, isAdmin, existing }),
-        },
+        { ...snippetData, ...settings },
         userId
       );
       Logger.debug(
@@ -200,6 +252,10 @@ class SnippetService {
         "Service: Find by ID result:",
         result ? "Found" : "Not Found"
       );
+      if (result && userId != null) {
+        result.is_owner = result.user_id === userId;
+        result.can_edit = canEditSnippet(result, userId);
+      }
       return result;
     } catch (error) {
       Logger.error("Service Error - findById:", error);

@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS snippets (
     is_public BOOLEAN DEFAULT FALSE,
     is_pinned BOOLEAN DEFAULT FALSE,
     is_favorite BOOLEAN DEFAULT FALSE,
-    group_id INTEGER DEFAULT NULL REFERENCES user_groups (id) ON DELETE SET NULL
+    group_id INTEGER DEFAULT NULL REFERENCES user_groups (id) ON DELETE SET NULL,
+    edit_permission TEXT NOT NULL DEFAULT 'owner'
 );
 
 CREATE TABLE IF NOT EXISTS categories (

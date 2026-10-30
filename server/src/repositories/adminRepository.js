@@ -85,7 +85,8 @@ class AdminRepository {
     this.statements.toggleSnippetPublic = db.prepare(`
       UPDATE snippets
       SET is_public = NOT is_public,
-          group_id = CASE WHEN is_public = 0 THEN NULL ELSE group_id END
+          group_id = CASE WHEN is_public = 0 THEN NULL ELSE group_id END,
+          edit_permission = CASE WHEN is_public = 0 AND edit_permission = 'group' THEN 'owner' ELSE edit_permission END
       WHERE id = ?
     `);
 

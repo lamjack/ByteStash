@@ -20,7 +20,8 @@ function needsMigration(db) {
     !tableExists(db, 'user_group_members') ||
     !tableExists(db, 'user_group_invites') ||
     !tableExists(db, 'app_settings') ||
-    !columnExists(db, 'snippets', 'group_id')
+    !columnExists(db, 'snippets', 'group_id') ||
+    !columnExists(db, 'snippets', 'edit_permission')
   );
 }
 
@@ -74,6 +75,11 @@ export function up_v1_10_0_groups(db) {
           ALTER TABLE snippets ADD COLUMN group_id INTEGER DEFAULT NULL REFERENCES user_groups (id) ON DELETE SET NULL;
           CREATE INDEX IF NOT EXISTS idx_snippets_group_id ON snippets (group_id);
         `);
+      }
+
+      if (!columnExists(db, 'snippets', 'edit_permission')) {
+        // 'owner' (default) | 'group' (members of group_id may edit) | 'readonly' (locked)
+        db.exec(`ALTER TABLE snippets ADD COLUMN edit_permission TEXT NOT NULL DEFAULT 'owner';`);
       }
     })();
 

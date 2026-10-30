@@ -38,6 +38,16 @@ Admins manage groups under **Admin → Groups**: create, rename or delete a grou
 - Adding an email that has no account yet creates an **invite**. That person may sign in with Google even while registration is closed, and joins the group on first sign-in (the email must be verified by the provider).
 - Deleting a group turns its snippets back to private.
 
+## Who can edit
+
+The owner also picks an edit permission for each snippet:
+
+| Edit permission | Who can edit |
+| --- | --- |
+| Only me (default) | The owner |
+| Group members | The owner and members of the snippet's group. Only for group-only snippets. Members can change the title, description, categories and files; visibility, edit permission, sharing and deleting stay with the owner. |
+| Read-only | Nobody, including the owner. The owner can switch to another option to unlock it. |
+
 ## MCP
 
 The MCP endpoint (`/mcp`, authenticated with an API key) follows the same rules:
@@ -45,4 +55,5 @@ The MCP endpoint (`/mcp`, authenticated with an API key) follows the same rules:
 - `list_snippets` takes `scope: "shared"` to list public snippets plus your groups' snippets (default `"mine"`).
 - `create_snippet` / `update_snippet` take `visibility` (`private`, `public`, `protected`) and `group_id`; `is_public` still works.
 - `list_groups` lists the groups you can publish to (all groups for admins).
-- `update_snippet` and `delete_snippet` only work on your own snippets.
+- `create_snippet` / `update_snippet` take `edit_permission` (`owner`, `group`, `readonly`).
+- `update_snippet` follows the edit permission above; `delete_snippet` only works on your own snippets.

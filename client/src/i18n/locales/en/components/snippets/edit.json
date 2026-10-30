@@ -47,6 +47,25 @@
             "description": "Only signed-in members of the selected group can view this snippet."
           }
         }
+      },
+      "editPermission": {
+        "label": "Who can edit",
+        "locked": "This snippet is read-only. Choose another option to edit it.",
+        "groupNeedsGroup": "Available for group-only snippets",
+        "options": {
+          "owner": {
+            "label": "Only me",
+            "description": "Only you can edit. Everyone it is shared with can only read it."
+          },
+          "group": {
+            "label": "Group members",
+            "description": "Members of the selected group can edit the content. Only you can change sharing, edit permission or delete it."
+          },
+          "readonly": {
+            "label": "Read-only",
+            "description": "Locked: nobody can edit it, including you, until you choose another option."
+          }
+        }
       }
     },
     "fragmentRequired": "At least one code fragment is required",

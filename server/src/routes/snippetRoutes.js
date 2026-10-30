@@ -74,8 +74,8 @@ router.post("/", async (req, res) => {
     );
     res.status(201).json(newSnippet);
   } catch (error) {
-    if (error.status === 400) {
-      return res.status(400).json({ error: error.message });
+    if ([400, 404, 409].includes(error.status)) {
+      return res.status(error.status).json({ error: error.message });
     }
     Logger.error("Error in POST /snippets:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -165,8 +165,8 @@ router.put("/:id", async (req, res) => {
       res.json(updatedSnippet);
     }
   } catch (error) {
-    if (error.status === 400) {
-      return res.status(400).json({ error: error.message });
+    if ([400, 404, 409].includes(error.status)) {
+      return res.status(error.status).json({ error: error.message });
     }
     Logger.error("Error in PUT /snippets/:id:", error);
     res.status(500).json({ error: "Internal server error" });
