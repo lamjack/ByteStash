@@ -19,6 +19,17 @@ export interface Snippet {
   is_pinned: number;
   is_favorite: number;
   username?: string;
+  visibility?: SnippetVisibility;
+  group_id?: number | null;
+  group_name?: string | null;
+}
+
+export type SnippetVisibility = 'public' | 'private' | 'protected';
+
+export interface Group {
+  id: number;
+  name: string;
+  description?: string | null;
 }
 
 export interface ShareSettings {

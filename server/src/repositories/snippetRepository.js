@@ -1,6 +1,12 @@
 import { getDb } from "../config/database.js";
 import Logger from "../logger.js";
-import { getCategoryFacets } from "./snippetMetadata.js";
+import { getCategoryFacets, GROUP_MEMBER_SQL, visibleToViewerSql } from "./snippetMetadata.js";
+
+export function getVisibility(snippet) {
+  if (snippet.is_public) return "public";
+  if (snippet.group_id) return "protected";
+  return "private";
+}
 
 class SnippetRepository {
   constructor() {
@@ -38,12 +44,15 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
+          s.group_id,
+          g.name as group_name,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.user_id = ? AND s.expiry_date IS NULL
         GROUP BY s.id
         ORDER BY s.updated_at DESC
@@ -59,12 +68,15 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
+          s.group_id,
+          g.name as group_name,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.is_public = 1 AND s.expiry_date IS NULL 
         GROUP BY s.id
         ORDER BY s.updated_at DESC
@@ -77,8 +89,9 @@ class SnippetRepository {
           updated_at,
           expiry_date,
           user_id,
-          is_public
-        ) VALUES (?, ?, datetime('now', 'utc'),NULL, ?, ?)
+          is_public,
+          group_id
+        ) VALUES (?, ?, datetime('now', 'utc'),NULL, ?, ?, ?)
       `);
 
       this.insertFragmentStmt = db.prepare(`
@@ -100,7 +113,8 @@ class SnippetRepository {
         SET title = ?, 
             description = ?,
             updated_at = datetime('now', 'utc'),
-            is_public = ?
+            is_public = ?,
+            group_id = ?
         WHERE id = ? AND user_id = ?
       `);
 
@@ -141,12 +155,15 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
+          s.group_id,
+          g.name as group_name,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.user_id = ? AND s.expiry_date IS NOT NULL
         GROUP BY s.id
         ORDER BY s.updated_at DESC
@@ -167,13 +184,16 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
+          s.group_id,
+          g.name as group_name,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
-        WHERE s.id = ? AND (s.user_id = ? OR s.is_public = 1) AND s.expiry_date IS NULL
+        LEFT JOIN user_groups g ON s.group_id = g.id
+        WHERE s.id = ? AND (s.user_id = ? OR s.is_public = 1 OR ${GROUP_MEMBER_SQL}) AND s.expiry_date IS NULL
         GROUP BY s.id
       `);
 
@@ -187,12 +207,15 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
+          s.group_id,
+          g.name as group_name,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE s.id = ? AND s.is_public = TRUE AND s.expiry_date IS NULL
         GROUP BY s.id
       `);
@@ -240,6 +263,7 @@ class SnippetRepository {
       categories: snippet.categories ? snippet.categories.split(",") : [],
       fragments: fragments.sort((a, b) => a.position - b.position),
       share_count: snippet.share_count || 0,
+      visibility: getVisibility(snippet),
     };
   }
 
@@ -272,6 +296,7 @@ class SnippetRepository {
     fragments = [],
     userId,
     isPublic = 0,
+    groupId = null,
   }) {
     this.#initializeStatements();
     try {
@@ -282,7 +307,8 @@ class SnippetRepository {
           title,
           description,
           userId,
-          isPublic ? 1 : 0
+          isPublic ? 1 : 0,
+          isPublic ? null : groupId
         );
         const snippetId = insertResult.lastInsertRowid;
 
@@ -307,7 +333,7 @@ class SnippetRepository {
           }
         }
 
-        const created = this.selectByIdStmt.get(snippetId, userId);
+        const created = this.selectByIdStmt.get(snippetId, userId, userId);
         return this.#processSnippet(created);
       })();
     } catch (error) {
@@ -318,7 +344,7 @@ class SnippetRepository {
 
   update(
     id,
-    { title, description, categories = [], fragments = [], isPublic = 0 },
+    { title, description, categories = [], fragments = [], isPublic = 0, groupId = null },
     userId
   ) {
     this.#initializeStatements();
@@ -330,6 +356,7 @@ class SnippetRepository {
           title,
           description,
           isPublic ? 1 : 0,
+          isPublic ? null : groupId,
           id,
           userId
         );
@@ -352,7 +379,7 @@ class SnippetRepository {
           }
         }
 
-        const updated = this.selectByIdStmt.get(id, userId);
+        const updated = this.selectByIdStmt.get(id, userId, userId);
         return this.#processSnippet(updated);
       })();
     } catch (error) {
@@ -379,8 +406,8 @@ class SnippetRepository {
     try {
       const db = getDb();
       return db.transaction(() => {
-        const snippet = this.selectByIdStmt.get(id, userId);
-        if (snippet) {
+        const snippet = this.selectByIdStmt.get(id, userId, userId);
+        if (snippet && snippet.user_id === userId) {
           this.moveToRecycleBinStmt.run(id, userId);
           return this.#processSnippet(snippet);
         }
@@ -433,10 +460,11 @@ class SnippetRepository {
   }
 
   findById(id, userId = null) {
+    // userId given: owner, public, or a member of the snippet's group can read it.
     this.#initializeStatements();
     try {
       if (userId != null) {
-        const snippet = this.selectByIdStmt.get(id, userId);
+        const snippet = this.selectByIdStmt.get(id, userId, userId);
         return this.#processSnippet(snippet);
       }
 
@@ -453,7 +481,7 @@ class SnippetRepository {
     try {
       const result = this.setPinnedStmt.run(value ? 1 : 0, id, userId);
       if (result.changes === 0) return null;
-      const updated = this.selectByIdStmt.get(id, userId);
+      const updated = this.selectByIdStmt.get(id, userId, userId);
       return this.#processSnippet(updated);
     } catch (error) {
       Logger.error("Error in setPinned:", error);
@@ -468,7 +496,7 @@ class SnippetRepository {
       if (result.changes === 0) {
         return null;
       }
-      const updated = this.selectByIdStmt.get(id, userId);
+      const updated = this.selectByIdStmt.get(id, userId, userId);
       return this.#processSnippet(updated);
     } catch (error) {
       Logger.error("Error in setFavorite:", error);
@@ -478,6 +506,7 @@ class SnippetRepository {
 
   findAllPaginated({
     userId = null,
+    viewerId = null,
     filters = {},
     sort = 'newest',
     limit = 50,
@@ -498,6 +527,8 @@ class SnippetRepository {
           s.is_public,
           s.is_pinned,
           s.is_favorite,
+          s.group_id,
+          g.name as group_name,
           u.username,
           GROUP_CONCAT(DISTINCT c.name) as categories,
           (SELECT COUNT(*) FROM shared_snippets WHERE snippet_id = s.id) as share_count,
@@ -505,6 +536,7 @@ class SnippetRepository {
         FROM snippets s
         LEFT JOIN categories c ON s.id = c.snippet_id
         LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE 1=1
       `;
 
@@ -515,7 +547,8 @@ class SnippetRepository {
         sql += ` AND s.user_id = ?`;
         params.push(userId);
       } else {
-        sql += ` AND s.is_public = 1`;
+        sql += ` AND ${visibleToViewerSql(viewerId)}`;
+        if (viewerId != null) params.push(viewerId);
       }
 
       if (filters.recycled) {
@@ -596,13 +629,13 @@ class SnippetRepository {
     }
   }
 
-  getMetadata(userId = null) {
+  getMetadata(userId = null, viewerId = null) {
     this.#initializeStatements();
     const db = getDb();
 
     try {
       // Get unique categories
-      const facets = getCategoryFacets(db, userId);
+      const facets = getCategoryFacets(db, userId, viewerId);
       const categories = facets.map((facet) => facet.value);
 
       // Get unique languages
@@ -618,21 +651,23 @@ class SnippetRepository {
         languageSql += ` AND s.user_id = ?`;
         languageParams.push(userId);
       } else {
-        languageSql += ` AND s.is_public = 1`;
+        languageSql += ` AND ${visibleToViewerSql(viewerId)}`;
+        if (viewerId != null) languageParams.push(viewerId);
       }
       languageSql += ` ORDER BY f.language`;
 
       const languages = db.prepare(languageSql).all(...languageParams).map(r => r.language);
 
       // Get counts
-      let countSql = `SELECT COUNT(*) as count FROM snippets WHERE expiry_date IS NULL`;
+      let countSql = `SELECT COUNT(*) as count FROM snippets s WHERE s.expiry_date IS NULL`;
       const countParams = [];
 
       if (userId !== null) {
-        countSql += ` AND user_id = ?`;
+        countSql += ` AND s.user_id = ?`;
         countParams.push(userId);
       } else {
-        countSql += ` AND is_public = 1`;
+        countSql += ` AND ${visibleToViewerSql(viewerId)}`;
+        if (viewerId != null) countParams.push(viewerId);
       }
 
       const total = db.prepare(countSql).get(...countParams).count;

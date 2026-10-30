@@ -73,3 +73,28 @@ test("getCategoryFacets counts active public snippets across users", () => {
   ]);
   db.close();
 });
+
+test("getCategoryFacets includes group-only snippets for group members", () => {
+  const db = createDatabase();
+  db.exec(`
+    ALTER TABLE snippets ADD COLUMN group_id INTEGER;
+    CREATE TABLE user_group_members (group_id INTEGER, user_id INTEGER);
+    INSERT INTO user_group_members (group_id, user_id) VALUES (5, 42);
+  `);
+  insertSnippet(db, 1, 7, 1);
+  insertSnippet(db, 2, 7, 0);
+  insertSnippet(db, 3, 7, 0);
+  db.prepare("UPDATE snippets SET group_id = 5 WHERE id = 2").run();
+  db.prepare("UPDATE snippets SET group_id = 6 WHERE id = 3").run();
+  insertCategory(db, 1, "public");
+  insertCategory(db, 2, "team");
+  insertCategory(db, 3, "other-team");
+
+  assert.deepEqual(getCategoryFacets(db, null, 42), [
+    { value: "public", count: 1 },
+    { value: "team", count: 1 },
+  ]);
+  assert.deepEqual(getCategoryFacets(db, null, null), [
+    { value: "public", count: 1 },
+  ]);
+});

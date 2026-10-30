@@ -1,11 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Users, FileCode, Key, Share2 } from 'lucide-react';
+import { Home, Users, UsersRound, FileCode, Key, Share2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ROUTES } from '../../constants/routes';
 
 interface AdminSelectorProps {
-  selected: 'dashboard' | 'users' | 'snippets' | 'api-keys' | 'shares';
+  selected: 'dashboard' | 'users' | 'groups' | 'snippets' | 'api-keys' | 'shares';
 }
 
 const AdminSelector: React.FC<AdminSelectorProps> = ({ selected }) => {
@@ -15,6 +15,7 @@ const AdminSelector: React.FC<AdminSelectorProps> = ({ selected }) => {
   const options = [
     { value: 'dashboard' as const, label: translate('dashboard'), icon: Home, route: ROUTES.ADMIN_DASHBOARD },
     { value: 'users' as const, label: translate('users'), icon: Users, route: ROUTES.ADMIN_USERS },
+    { value: 'groups' as const, label: translate('groups'), icon: UsersRound, route: ROUTES.ADMIN_GROUPS },
     { value: 'snippets' as const, label: translate('snippets'), icon: FileCode, route: ROUTES.ADMIN_SNIPPETS },
     { value: 'api-keys' as const, label: translate('apiKeys'), icon: Key, route: ROUTES.ADMIN_API_KEYS },
     { value: 'shares' as const, label: translate('shares'), icon: Share2, route: ROUTES.ADMIN_SHARES },

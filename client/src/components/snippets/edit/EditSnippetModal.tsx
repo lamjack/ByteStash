@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Globe, Lock, Plus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Switch } from "../../../components/common/switch/Switch";
-import { CodeFragment, Snippet } from "../../../types/snippets";
+import { CodeFragment, Group, Snippet, SnippetVisibility } from "../../../types/snippets";
+import { fetchPublishableGroups } from "../../../utils/api/groups";
 import {
   detectLanguageFromFileName,
   getLanguageDropdownSections,
@@ -12,6 +12,13 @@ import CategorySuggestions from "../../categories/CategorySuggestions";
 import FileUploadButton from "../../common/buttons/FileUploadButton";
 import Modal from "../../common/modals/Modal";
 import { FragmentEditor } from "./FragmentEditor";
+
+const getSnippetVisibility = (snippet: Snippet | null): SnippetVisibility => {
+  if (!snippet) return "private";
+  if (snippet.visibility) return snippet.visibility;
+  if (snippet.is_public) return "public";
+  return snippet.group_id ? "protected" : "private";
+};
 
 const getMostUsedLanguage = (): string => {
   const sections = getLanguageDropdownSections();
@@ -44,7 +51,9 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
   const [categoryInput, setCategoryInput] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPublic, setIsPublic] = useState(snippetToEdit?.is_public || false);
+  const [visibility, setVisibility] = useState<SnippetVisibility>(getSnippetVisibility(snippetToEdit));
+  const [groupId, setGroupId] = useState<number | null>(snippetToEdit?.group_id ?? null);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleFileNameChange = (index: number, newName: string) => {
@@ -74,6 +83,8 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       },
     ]);
     setCategories([]);
+    setVisibility("private");
+    setGroupId(null);
     setError("");
     setCategoryInput("");
     setHasUnsavedChanges(false);
@@ -86,7 +97,8 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
         setDescription(snippetToEdit.description || "");
         setFragments(JSON.parse(JSON.stringify(snippetToEdit.fragments || [])));
         setCategories(snippetToEdit.categories || []);
-        setIsPublic(snippetToEdit.is_public || false);
+        setVisibility(getSnippetVisibility(snippetToEdit));
+        setGroupId(snippetToEdit.group_id ?? null);
       } else {
         resetForm();
       }
@@ -98,6 +110,36 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       resetForm();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetchPublishableGroups()
+      .then((result) => {
+        if (!cancelled) setGroups(Array.isArray(result) ? result : []);
+      })
+      .catch(() => {
+        if (!cancelled) setGroups([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  const visibilityOptions: {
+    value: SnippetVisibility;
+    icon: typeof Lock;
+  }[] = [
+    { value: "private", icon: Lock },
+    { value: "public", icon: Globe },
+    { value: "protected", icon: Users },
+  ];
+
+  // Keep the snippet's current group selectable even if the user is no longer listed in it
+  const groupOptions =
+    groupId && snippetToEdit?.group_name && !groups.some((g) => g.id === groupId)
+      ? [...groups, { id: groupId, name: snippetToEdit.group_name }]
+      : groups;
 
   const handleCategorySelect = (category: string) => {
     const normalizedCategory = category.toLowerCase().trim();
@@ -209,13 +251,20 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
       return;
     }
 
+    if (visibility === "protected" && !groupId) {
+      setError(translate('editSnippetModal.form.visibility.groupRequired'));
+      return;
+    }
+
     setIsSubmitting(true);
     const snippetData = {
       title: title.slice(0, 255),
       description: description,
       fragments: fragments.map((f, idx) => ({ ...f, position: idx })),
       categories: categories,
-      is_public: isPublic ? 1 : 0,
+      is_public: visibility === "public" ? 1 : 0,
+      visibility,
+      group_id: visibility === "protected" ? groupId : null,
       is_pinned: snippetToEdit?.is_pinned || 0,
       is_favorite: snippetToEdit?.is_favorite || 0,
     };
@@ -382,25 +431,66 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                 />
               </div>
 
-              {/* Public snippet section */}
-              <div className="space-y-1">
-                <label className="flex flex-wrap items-center gap-2">
-                  <Switch
-                    id="isPublic"
-                    checked={!!isPublic}
-                    onChange={(checked) => {
-                      setIsPublic(checked);
+              {/* Visibility section */}
+              <div className="space-y-2">
+                <span className="block text-sm font-medium text-light-text dark:text-dark-text">
+                  {translate('editSnippetModal.form.visibility.label')}
+                </span>
+                <div
+                  role="radiogroup"
+                  aria-label={translate('editSnippetModal.form.visibility.label')}
+                  className="flex flex-wrap gap-2"
+                >
+                  {visibilityOptions.map(({ value, icon: Icon }) => {
+                    const selected = visibility === value;
+                    const disabled = value === "protected" && groupOptions.length === 0;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        disabled={disabled}
+                        title={disabled ? translate('editSnippetModal.form.visibility.noGroups') : undefined}
+                        onClick={() => {
+                          setVisibility(value);
+                          if (value === "protected" && !groupId && groupOptions.length > 0) {
+                            setGroupId(groupOptions[0].id);
+                          }
+                          setHasUnsavedChanges(true);
+                        }}
+                        className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          selected
+                            ? "border-light-primary bg-light-hover text-light-text dark:border-dark-primary dark:bg-dark-hover dark:text-dark-text"
+                            : "border-light-border text-light-text-secondary hover:bg-light-hover/50 dark:border-dark-border dark:text-dark-text-secondary dark:hover:bg-dark-hover/50"
+                        }`}
+                      >
+                        <Icon size={14} aria-hidden="true" />
+                        {translate(`editSnippetModal.form.visibility.options.${value}.label`)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {visibility === "protected" && (
+                  <select
+                    aria-label={translate('editSnippetModal.form.visibility.group')}
+                    value={groupId ?? ""}
+                    onChange={(e) => {
+                      setGroupId(e.target.value ? Number(e.target.value) : null);
                       setHasUnsavedChanges(true);
                     }}
-                  />
-                  <span className="text-sm font-medium text-light-text dark:text-dark-text">
-                    {translate('editSnippetModal.form.isPublic.label')}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                    {translate('editSnippetModal.form.isPublic.description')}
-                  </span>
-                </label>
+                    className="block w-full p-2 text-sm border rounded-md bg-light-surface dark:bg-dark-surface text-light-text dark:text-dark-text border-light-border dark:border-dark-border focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+                  >
+                    {groupOptions.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                  {translate(`editSnippetModal.form.visibility.options.${visibility}.description`)}
+                </p>
               </div>
 
               {/* Code Fragments section */}

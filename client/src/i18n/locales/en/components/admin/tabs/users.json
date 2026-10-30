@@ -59,5 +59,15 @@
   "table": {
     "emptyMessage": "No users found",
     "loadingMessage": "Loading users..."
+  },
+  "registration": {
+    "label": "Allow new registrations",
+    "open": "Anyone who can sign in (including with Google) can create an account.",
+    "closed": "Closed: only existing users and invited emails can sign in.",
+    "success": {
+      "opened": "Registration opened",
+      "closed": "Registration closed"
+    },
+    "error": "Failed to update registration setting"
   }
 }

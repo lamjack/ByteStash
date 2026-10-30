@@ -161,10 +161,13 @@ class UserRepository {
           .slice(0, 30);
       };
 
-      let baseUsername = profile.preferred_username ? sanitizeName(profile.preferred_username) :
-                        profile.email?.split('@')[0] || 
-                        profile.name ? sanitizeName(profile.name) :
-                        profile.sub;
+      // Google sends no preferred_username, so the email's local part is used (e.g. "tim" for tim@gmail.com).
+      // That is the name to list in ADMIN_USERNAMES.
+      const baseUsername =
+        (profile.preferred_username && sanitizeName(profile.preferred_username)) ||
+        (profile.email && sanitizeName(profile.email.split('@')[0])) ||
+        (profile.name && sanitizeName(profile.name)) ||
+        profile.sub;
                           
       const username = await this.generateUniqueUsername(baseUsername);
 

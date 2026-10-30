@@ -1,7 +1,9 @@
 import express from 'express';
 import { OIDCConfig } from '../oidc/oidcConfig.js';
 import userRepository from '../repositories/userRepository.js';
-import { JWT_SECRET, TOKEN_EXPIRY, ALLOW_NEW_ACCOUNTS } from '../middleware/auth.js';
+import { JWT_SECRET, TOKEN_EXPIRY } from '../middleware/auth.js';
+import appSettingsRepository from '../repositories/appSettingsRepository.js';
+import groupRepository from '../repositories/groupRepository.js';
 import jwt from 'jsonwebtoken';
 import Logger from '../logger.js';
 import { getDb } from '../config/database.js';
@@ -129,14 +131,14 @@ router.get('/callback', async (req, res) => {
       oidc.config.serverMetadata().issuer
     );
 
-    if (!hasUsers && !existingUser) {
-      const db = getDb();
-      const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-      const hasUsers = userCount > 0;
+    // Only trust the email for invites when the provider says it is verified (Google does).
+    const verifiedEmail = userInfo.email && userInfo.email_verified !== false ? userInfo.email : null;
 
-      if (hasUsers && !ALLOW_NEW_ACCOUNTS) {
-        Logger.error('OIDC registration blocked: New accounts not allowed');
-        return res.redirect('/login?error=registration_disabled');
+    if (hasUsers && !existingUser) {
+      const invited = groupRepository.hasInvite(verifiedEmail);
+      if (!appSettingsRepository.isRegistrationOpen() && !invited) {
+        Logger.info('OIDC registration blocked: New accounts not allowed');
+        return res.redirect(`${process.env.BASE_PATH || ''}/login?error=registration_disabled`);
       }
     }
 
@@ -151,6 +153,10 @@ router.get('/callback', async (req, res) => {
     }
 
     await userRepository.updateLastLogin(user.id);
+
+    if (verifiedEmail) {
+      groupRepository.acceptInvites(user.id, verifiedEmail);
+    }
 
     if (!hasUsers) {
       await up_v1_5_0_snippets(db, user.id);

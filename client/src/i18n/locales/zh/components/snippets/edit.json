@@ -27,6 +27,26 @@
         "counter": "{{characters}}/{{max}} 个字符",
         "label": "标题",
         "placeholder": "输入代码片段标题（最多 {{max}} 个字符）"
+      },
+      "visibility": {
+        "label": "可见范围",
+        "group": "群组",
+        "groupRequired": "请为仅群组可见的片段选择一个群组",
+        "noGroups": "你还不在任何群组中，请联系管理员添加。",
+        "options": {
+          "private": {
+            "label": "私有",
+            "description": "只有你自己可以看到这个片段。"
+          },
+          "public": {
+            "label": "公开",
+            "description": "任何人都可以查看，无需登录。"
+          },
+          "protected": {
+            "label": "仅群组",
+            "description": "只有所选群组中已登录的成员可以查看。"
+          }
+        }
       }
     },
     "fragmentRequired": "至少需要一个代码片段",

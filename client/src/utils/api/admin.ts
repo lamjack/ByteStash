@@ -96,4 +96,42 @@ export const adminApi = {
 
   deleteShare: (id: string) =>
     apiClient.delete<any>(`${BASE_URL}/shares/${id}`, { requiresAuth: true }),
+
+  // Instance settings
+  getSettings: () =>
+    apiClient.get<{ allowNewAccounts: boolean }>(`${BASE_URL}/settings`, { requiresAuth: true }),
+
+  updateSettings: (settings: { allowNewAccounts: boolean }) =>
+    apiClient.patch<{ allowNewAccounts: boolean }>(`${BASE_URL}/settings`, settings, {
+      requiresAuth: true,
+    }),
+
+  // Groups
+  getGroups: () => apiClient.get<any[]>(`${BASE_URL}/groups`, { requiresAuth: true }),
+
+  createGroup: (group: { name: string; description?: string }) =>
+    apiClient.post<any>(`${BASE_URL}/groups`, group, { requiresAuth: true }),
+
+  updateGroup: (id: number, group: { name: string; description?: string }) =>
+    apiClient.put<any>(`${BASE_URL}/groups/${id}`, group, { requiresAuth: true }),
+
+  deleteGroup: (id: number) =>
+    apiClient.delete<any>(`${BASE_URL}/groups/${id}`, { requiresAuth: true }),
+
+  getGroupMembers: (id: number) =>
+    apiClient.get<{ members: any[]; invites: any[] }>(`${BASE_URL}/groups/${id}/members`, {
+      requiresAuth: true,
+    }),
+
+  // identifier: an existing username or email, or an email to invite
+  addGroupMember: (id: number, identifier: string) =>
+    apiClient.post<any>(`${BASE_URL}/groups/${id}/members`, { identifier }, { requiresAuth: true }),
+
+  removeGroupMember: (id: number, userId: number) =>
+    apiClient.delete<any>(`${BASE_URL}/groups/${id}/members/${userId}`, { requiresAuth: true }),
+
+  removeGroupInvite: (id: number, email: string) =>
+    apiClient.delete<any>(`${BASE_URL}/groups/${id}/invites/${encodeURIComponent(email)}`, {
+      requiresAuth: true,
+    }),
 };

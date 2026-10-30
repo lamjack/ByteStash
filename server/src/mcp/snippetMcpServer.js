@@ -230,6 +230,8 @@ export function createMcpServer(userId) {
             categories: args.categories ?? existing.categories,
             fragments,
             is_public: (args.is_public ?? !!existing.is_public) ? 1 : 0,
+            // Keep a group-only snippet in its group unless it is being made public
+            group_id: args.is_public ? null : existing.group_id ?? null,
           },
           userId
         );

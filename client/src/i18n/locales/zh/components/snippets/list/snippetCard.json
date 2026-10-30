@@ -35,5 +35,6 @@
   "favorite": "已收藏",
   "pinned": "已置顶",
   "public": "公开",
-  "shared": "已分享"
+  "shared": "已分享",
+  "groupOnly": "仅群组可见：{{group}}"
 }

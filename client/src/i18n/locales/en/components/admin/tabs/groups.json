@@ -1,0 +1,60 @@
+{
+  "intro": "Create groups and add members. Snippets set to \"Group only\" are visible only to members of that group. Add people by username or email; an email without an account becomes an invite, which lets that person sign up even when registration is closed.",
+  "form": {
+    "name": "Group name",
+    "description": "Description (optional)",
+    "create": "Create group",
+    "save": "Save"
+  },
+  "columns": {
+    "name": "Name",
+    "members": "Members",
+    "invites_one": "{{count}} invite",
+    "invites_other": "{{count}} invites",
+    "snippets": "Snippets",
+    "created": "Created",
+    "actions": "Actions"
+  },
+  "action": {
+    "members": "Manage members",
+    "edit": "Edit group",
+    "delete": "Delete group"
+  },
+  "members": {
+    "title": "Members of {{name}}",
+    "close": "Close",
+    "add": "Add",
+    "addPlaceholder": "Username or email",
+    "addHint": "Unknown emails are saved as invites and join the group on their first Google sign-in.",
+    "loading": "Loading members...",
+    "empty": "No members yet",
+    "remove": "Remove from group",
+    "cancelInvite": "Cancel invite",
+    "pending": "Invited",
+    "success": {
+      "added": "Added {{username}} to the group",
+      "invited": "Invited {{email}}"
+    },
+    "error": {
+      "add": "Failed to add member",
+      "remove": "Failed to remove"
+    }
+  },
+  "success": {
+    "create": "Group created",
+    "update": "Group updated",
+    "delete": "Group deleted"
+  },
+  "error": {
+    "save": "Failed to save group",
+    "delete": "Failed to delete group"
+  },
+  "table": {
+    "emptyMessage": "No groups yet",
+    "loadingMessage": "Loading groups..."
+  },
+  "confirmationModal": {
+    "title": "Delete group",
+    "message": "Delete this group? Its snippets become private to their owners. This cannot be undone."
+  }
+}

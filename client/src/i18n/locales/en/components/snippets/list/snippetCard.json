@@ -35,5 +35,6 @@
   "favorite": "Favorite",
   "pinned": "Pinned",
   "public": "Public",
-  "shared": "Shared"
+  "shared": "Shared",
+  "groupOnly": "Group only: {{group}}"
 }

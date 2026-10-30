@@ -13,6 +13,35 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+CREATE TABLE IF NOT EXISTS user_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_group_members (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES user_groups (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_group_invites (
+    group_id INTEGER NOT NULL,
+    email TEXT NOT NULL COLLATE NOCASE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (group_id, email),
+    FOREIGN KEY (group_id) REFERENCES user_groups (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+
 CREATE TABLE IF NOT EXISTS snippets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -22,7 +51,8 @@ CREATE TABLE IF NOT EXISTS snippets (
     user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
     is_public BOOLEAN DEFAULT FALSE,
     is_pinned BOOLEAN DEFAULT FALSE,
-    is_favorite BOOLEAN DEFAULT FALSE
+    is_favorite BOOLEAN DEFAULT FALSE,
+    group_id INTEGER DEFAULT NULL REFERENCES user_groups (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -93,3 +123,9 @@ WHERE
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys (key);
+
+CREATE INDEX IF NOT EXISTS idx_snippets_group_id ON snippets (group_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_groups_name ON user_groups (name COLLATE NOCASE);
+
+CREATE INDEX IF NOT EXISTS idx_user_group_members_user_id ON user_group_members (user_id);
