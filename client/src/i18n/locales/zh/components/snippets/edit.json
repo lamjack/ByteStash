@@ -66,6 +66,9 @@
             "description": "已锁定：包括你在内，没有人可以编辑，直到你改为其他选项。"
           }
         }
+      },
+      "sharing": {
+        "label": "分享设置"
       }
     },
     "fragmentRequired": "至少需要一个代码片段",

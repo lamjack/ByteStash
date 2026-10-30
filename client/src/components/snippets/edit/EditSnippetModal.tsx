@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CodeFragment, EditPermission, Group, Snippet, SnippetVisibility } from "../../../types/snippets";
 import { fetchPublishableGroups } from "../../../utils/api/groups";
@@ -57,6 +57,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
   const [visibility, setVisibility] = useState<SnippetVisibility>(getSnippetVisibility(snippetToEdit));
   const [groupId, setGroupId] = useState<number | null>(snippetToEdit?.group_id ?? null);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [isSharingOpen, setIsSharingOpen] = useState(false);
   const [editPermission, setEditPermission] = useState<EditPermission>(snippetToEdit?.edit_permission ?? "owner");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -90,6 +91,7 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     setVisibility("private");
     setGroupId(null);
     setEditPermission("owner");
+    setIsSharingOpen(false);
     setError("");
     setCategoryInput("");
     setHasUnsavedChanges(false);
@@ -257,11 +259,13 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
     }
 
     if (isLocked) {
+      setIsSharingOpen(true);
       setError(translate('editSnippetModal.form.editPermission.locked'));
       return;
     }
 
     if (visibility === "protected" && !groupId) {
+      setIsSharingOpen(true);
       setError(translate('editSnippetModal.form.visibility.groupRequired'));
       return;
     }
@@ -442,9 +446,31 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                 />
               </div>
 
-              {/* Sharing settings: one compact row so the code fragments stay near the top */}
+              {/* Sharing settings: collapsed to a one-line summary so the code fragments stay near the top */}
               {isOwner && (
-                <div className="space-y-1">
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    aria-expanded={isSharingOpen}
+                    onClick={() => setIsSharingOpen((open) => !open)}
+                    className="flex w-full items-center gap-2 text-left text-sm"
+                  >
+                    {isSharingOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
+                    <span className="font-medium text-light-text dark:text-dark-text">
+                      {translate('editSnippetModal.form.sharing.label')}
+                    </span>
+                    <span className="truncate text-light-text-secondary dark:text-dark-text-secondary">
+                      {[
+                        translate(`editSnippetModal.form.visibility.options.${visibility}.label`),
+                        visibility === "protected" ? groupOptions.find((g) => g.id === groupId)?.name : null,
+                        translate(`editSnippetModal.form.editPermission.options.${effectiveEditPermission}.label`),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </button>
+                  {isSharingOpen && (
+                  <>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <label className="space-y-1">
                       <span className="block text-sm font-medium text-light-text dark:text-dark-text">
@@ -524,6 +550,8 @@ const EditSnippetModal: React.FC<EditSnippetModalProps> = ({
                       ? translate('editSnippetModal.form.editPermission.locked')
                       : translate(`editSnippetModal.form.editPermission.options.${effectiveEditPermission}.description`)}
                   </p>
+                  </>
+                  )}
                 </div>
               )}
 

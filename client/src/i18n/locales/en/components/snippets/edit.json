@@ -66,6 +66,9 @@
             "description": "Locked: nobody can edit it, including you, until you choose another option."
           }
         }
+      },
+      "sharing": {
+        "label": "Sharing"
       }
     },
     "fragmentRequired": "At least one code fragment is required",
