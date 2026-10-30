@@ -27,6 +27,48 @@
         "counter": "{{characters}}/{{max}} 个字符",
         "label": "标题",
         "placeholder": "输入代码片段标题（最多 {{max}} 个字符）"
+      },
+      "visibility": {
+        "label": "可见范围",
+        "group": "群组",
+        "groupRequired": "请为仅群组可见的片段选择一个群组",
+        "noGroups": "你还不在任何群组中，请联系管理员添加。",
+        "options": {
+          "private": {
+            "label": "私有",
+            "description": "只有你自己可以看到这个片段。"
+          },
+          "public": {
+            "label": "公开",
+            "description": "任何人都可以查看，无需登录。"
+          },
+          "protected": {
+            "label": "仅群组",
+            "description": "只有所选群组中已登录的成员可以查看。"
+          }
+        }
+      },
+      "editPermission": {
+        "label": "谁可以编辑",
+        "locked": "这个片段是只读的。请先选择其他选项再编辑。",
+        "groupNeedsGroup": "仅群组可见的片段才能使用",
+        "options": {
+          "owner": {
+            "label": "只有我",
+            "description": "只有你可以编辑，其他人只能查看。"
+          },
+          "group": {
+            "label": "群组成员",
+            "description": "所选群组的成员可以编辑内容。可见范围、编辑权限和删除仍然只有你能操作。"
+          },
+          "readonly": {
+            "label": "只读",
+            "description": "已锁定：包括你在内，没有人可以编辑，直到你改为其他选项。"
+          }
+        }
+      },
+      "sharing": {
+        "label": "分享设置"
       }
     },
     "fragmentRequired": "至少需要一个代码片段",

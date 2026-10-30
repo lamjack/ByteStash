@@ -1,5 +1,80 @@
 import Logger from "../logger.js";
 import snippetRepository from "../repositories/snippetRepository.js";
+import groupRepository from "../repositories/groupRepository.js";
+
+export class VisibilityError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
+const EDIT_PERMISSIONS = ["owner", "group", "readonly"];
+
+/**
+ * Who may change a snippet's content: "owner" (default) only the owner, "group" also
+ * members of its group (group-only snippets), "readonly" nobody until the owner unlocks it.
+ */
+function resolveEditPermission(snippetData, { isPublic, groupId, existing = null }) {
+  const permission = snippetData.edit_permission ?? existing?.edit_permission ?? "owner";
+  if (!EDIT_PERMISSIONS.includes(permission)) {
+    throw new VisibilityError(`Unknown edit permission: ${permission}`);
+  }
+  if (permission === "group" && (isPublic || !groupId)) {
+    // Group editing needs a group; fall back for public/private snippets
+    return "owner";
+  }
+  return permission;
+}
+
+export function canEditSnippet(snippet, userId) {
+  if (!snippet || snippet.edit_permission === "readonly") return false;
+  if (snippet.user_id === userId) return true;
+  return (
+    snippet.edit_permission === "group" &&
+    !snippet.is_public &&
+    !!snippet.group_id &&
+    groupRepository.isMember(snippet.group_id, userId)
+  );
+}
+
+/**
+ * Works out is_public / group_id from the request body. Clients send either
+ * `visibility` ("public" | "private" | "protected") with `group_id`, or the
+ * legacy `is_public` flag. Only admins and members of a group may publish to it.
+ */
+function resolveVisibility(snippetData, { userId, isAdmin = false, existing = null }) {
+  let visibility = snippetData.visibility;
+  let groupId = snippetData.group_id ?? null;
+
+  if (!visibility) {
+    if (snippetData.is_public) {
+      visibility = "public";
+    } else if (snippetData.group_id !== undefined) {
+      visibility = groupId ? "protected" : "private";
+    } else {
+      visibility = "private";
+    }
+  }
+
+  if (visibility === "public") return { isPublic: 1, groupId: null };
+  if (visibility === "private") return { isPublic: 0, groupId: null };
+  if (visibility !== "protected") {
+    throw new VisibilityError(`Unknown visibility: ${visibility}`);
+  }
+
+  groupId = parseInt(groupId);
+  if (!groupId || !groupRepository.findById(groupId)) {
+    throw new VisibilityError("A valid group is required for group-only snippets");
+  }
+
+  const keepsSameGroup = existing && existing.group_id === groupId;
+  if (!isAdmin && !keepsSameGroup && !groupRepository.isMember(groupId, userId)) {
+    throw new VisibilityError("You can only publish to groups you belong to");
+  }
+
+  return { isPublic: 0, groupId };
+}
 
 class SnippetService {
   async getAllSnippets(userId) {
@@ -26,13 +101,15 @@ class SnippetService {
     }
   }
 
-  async createSnippet(snippetData, userId) {
+  async createSnippet(snippetData, userId, { isAdmin = false } = {}) {
     try {
       Logger.debug("Service: Creating new snippet for user:", userId);
+      const visibility = resolveVisibility(snippetData, { userId, isAdmin });
       const result = await snippetRepository.create({
         ...snippetData,
         userId,
-        isPublic: snippetData.is_public || 0,
+        ...visibility,
+        editPermission: resolveEditPermission(snippetData, visibility),
       });
       Logger.debug("Service: Created snippet with ID:", result.id);
       return result;
@@ -119,15 +196,37 @@ class SnippetService {
     }
   }
 
-  async updateSnippet(id, snippetData, userId) {
+  async updateSnippet(id, snippetData, userId, { isAdmin = false } = {}) {
     try {
       Logger.debug("Service: Updating snippet:", id, "for user:", userId);
+      const existing = snippetRepository.findById(id, userId);
+      if (!existing) return null;
+
+      let settings;
+      if (existing.user_id === userId) {
+        // The owner controls visibility and edit permission, and may unlock a read-only
+        // snippet, but not change its content while it stays read-only.
+        const visibility = resolveVisibility(snippetData, { userId, isAdmin, existing });
+        const editPermission = resolveEditPermission(snippetData, { ...visibility, existing });
+        if (existing.edit_permission === "readonly" && editPermission === "readonly") {
+          throw new VisibilityError("This snippet is read-only. Change its edit permission to edit it.", 409);
+        }
+        settings = { ...visibility, editPermission };
+      } else if (canEditSnippet(existing, userId)) {
+        // Group editors change content only; sharing settings stay as the owner set them
+        settings = {
+          isPublic: existing.is_public,
+          groupId: existing.group_id,
+          editPermission: existing.edit_permission,
+        };
+      } else {
+        // 404 rather than 403: the web client treats 403 as an expired session
+        throw new VisibilityError("You do not have permission to edit this snippet", 404);
+      }
+
       const result = await snippetRepository.update(
         id,
-        {
-          ...snippetData,
-          isPublic: snippetData.is_public || 0,
-        },
+        { ...snippetData, ...settings },
         userId
       );
       Logger.debug(
@@ -153,6 +252,10 @@ class SnippetService {
         "Service: Find by ID result:",
         result ? "Found" : "Not Found"
       );
+      if (result && userId != null) {
+        result.is_owner = result.user_id === userId;
+        result.can_edit = canEditSnippet(result, userId);
+      }
       return result;
     } catch (error) {
       Logger.error("Service Error - findById:", error);
@@ -204,7 +307,7 @@ class SnippetService {
     }
   }
 
-  async getSnippetsPaginated({ userId, filters, sort, limit, offset }) {
+  async getSnippetsPaginated({ userId, viewerId = null, filters, sort, limit, offset }) {
     try {
       Logger.debug(
         "Service: Getting paginated snippets for user:",
@@ -220,6 +323,7 @@ class SnippetService {
       );
       const result = await snippetRepository.findAllPaginated({
         userId,
+        viewerId,
         filters,
         sort,
         limit,
@@ -235,13 +339,13 @@ class SnippetService {
     }
   }
 
-  async getMetadata(userId = null) {
+  async getMetadata(userId = null, viewerId = null) {
     try {
       Logger.debug(
         "Service: Getting metadata for",
         userId !== null ? `user: ${userId}` : "public snippets"
       );
-      const result = await snippetRepository.getMetadata(userId);
+      const result = await snippetRepository.getMetadata(userId, viewerId);
       Logger.debug(
         `Service: Retrieved ${result.categories.length} categories, ${result.languages.length} languages`
       );

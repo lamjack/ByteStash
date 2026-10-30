@@ -1,5 +1,7 @@
 import express from 'express';
 import adminRepository from '../repositories/adminRepository.js';
+import groupRepository from '../repositories/groupRepository.js';
+import appSettingsRepository from '../repositories/appSettingsRepository.js';
 import badWordsChecker from '../utils/badWords.js';
 import Logger from '../logger.js';
 
@@ -229,6 +231,174 @@ router.delete('/shares/:id', async (req, res) => {
   } catch (error) {
     Logger.error('Error deleting share:', error);
     res.status(500).json({ message: 'Failed to delete share' });
+  }
+});
+
+// Instance settings
+router.get('/settings', async (req, res) => {
+  try {
+    res.json({ allowNewAccounts: appSettingsRepository.isRegistrationOpen() });
+  } catch (error) {
+    Logger.error('Error getting settings:', error);
+    res.status(500).json({ message: 'Failed to retrieve settings' });
+  }
+});
+
+router.patch('/settings', async (req, res) => {
+  try {
+    const { allowNewAccounts } = req.body;
+    if (typeof allowNewAccounts !== 'boolean') {
+      return res.status(400).json({ message: 'allowNewAccounts must be a boolean' });
+    }
+    appSettingsRepository.setRegistrationOpen(allowNewAccounts);
+    res.json({ allowNewAccounts: appSettingsRepository.isRegistrationOpen() });
+  } catch (error) {
+    Logger.error('Error updating settings:', error);
+    res.status(500).json({ message: 'Failed to update settings' });
+  }
+});
+
+// Group management
+const parseGroupBody = (body) => ({
+  name: typeof body.name === 'string' ? body.name.trim() : '',
+  description: typeof body.description === 'string' ? body.description.trim() || null : null,
+});
+
+const isUniqueViolation = (error) =>
+  error.code === 'SQLITE_CONSTRAINT_UNIQUE' || error.code === 'SQLITE_CONSTRAINT';
+
+router.get('/groups', async (req, res) => {
+  try {
+    res.json(groupRepository.findAll());
+  } catch (error) {
+    Logger.error('Error getting groups:', error);
+    res.status(500).json({ message: 'Failed to retrieve groups' });
+  }
+});
+
+router.post('/groups', async (req, res) => {
+  try {
+    const data = parseGroupBody(req.body);
+    if (!data.name) {
+      return res.status(400).json({ message: 'Group name is required' });
+    }
+    res.status(201).json(groupRepository.create(data));
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ message: 'A group with this name already exists' });
+    }
+    Logger.error('Error creating group:', error);
+    res.status(500).json({ message: 'Failed to create group' });
+  }
+});
+
+router.put('/groups/:id', async (req, res) => {
+  try {
+    const data = parseGroupBody(req.body);
+    if (!data.name) {
+      return res.status(400).json({ message: 'Group name is required' });
+    }
+    const group = groupRepository.update(parseInt(req.params.id), data);
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+    res.json(group);
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ message: 'A group with this name already exists' });
+    }
+    Logger.error('Error updating group:', error);
+    res.status(500).json({ message: 'Failed to update group' });
+  }
+});
+
+router.delete('/groups/:id', async (req, res) => {
+  try {
+    if (!groupRepository.delete(parseInt(req.params.id))) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+    res.json({ message: 'Group deleted successfully' });
+  } catch (error) {
+    Logger.error('Error deleting group:', error);
+    res.status(500).json({ message: 'Failed to delete group' });
+  }
+});
+
+router.get('/groups/:id/members', async (req, res) => {
+  try {
+    const groupId = parseInt(req.params.id);
+    if (!groupRepository.findById(groupId)) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+    res.json({
+      members: groupRepository.getMembers(groupId),
+      invites: groupRepository.getInvites(groupId),
+    });
+  } catch (error) {
+    Logger.error('Error getting group members:', error);
+    res.status(500).json({ message: 'Failed to retrieve group members' });
+  }
+});
+
+// Body: { userId } or { identifier: username or email }. An email with no account yet
+// becomes an invite: that person may sign up (even with registration closed) and
+// joins the group on first login.
+router.post('/groups/:id/members', async (req, res) => {
+  try {
+    const groupId = parseInt(req.params.id);
+    if (!groupRepository.findById(groupId)) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+
+    const { userId, identifier } = req.body;
+    let user = null;
+    if (userId) {
+      user = await adminRepository.getUserDetails(parseInt(userId));
+    } else if (identifier) {
+      user = groupRepository.findUserByUsernameOrEmail(identifier);
+    }
+
+    if (user && user.id !== 0) {
+      groupRepository.addMember(groupId, user.id);
+      return res.status(201).json({ type: 'member', userId: user.id, username: user.username });
+    }
+
+    const email = typeof identifier === 'string' ? identifier.trim() : '';
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      groupRepository.addInvite(groupId, email);
+      return res.status(201).json({ type: 'invite', email: email.toLowerCase() });
+    }
+
+    res.status(404).json({ message: 'User not found. Enter an existing username, or an email address to invite.' });
+  } catch (error) {
+    Logger.error('Error adding group member:', error);
+    res.status(500).json({ message: 'Failed to add group member' });
+  }
+});
+
+router.delete('/groups/:id/members/:userId', async (req, res) => {
+  try {
+    const removed = groupRepository.removeMember(parseInt(req.params.id), parseInt(req.params.userId));
+    if (!removed) {
+      return res.status(404).json({ message: 'Member not found' });
+    }
+    res.json({ message: 'Member removed successfully' });
+  } catch (error) {
+    Logger.error('Error removing group member:', error);
+    res.status(500).json({ message: 'Failed to remove group member' });
+  }
+});
+
+router.delete('/groups/:id/invites/:email', async (req, res) => {
+  try {
+    const removed = groupRepository.removeInvite(parseInt(req.params.id), req.params.email);
+    if (!removed) {
+      return res.status(404).json({ message: 'Invite not found' });
+    }
+    res.json({ message: 'Invite removed successfully' });
+  } catch (error) {
+    Logger.error('Error removing group invite:', error);
+    res.status(500).json({ message: 'Failed to remove group invite' });
   }
 });
 

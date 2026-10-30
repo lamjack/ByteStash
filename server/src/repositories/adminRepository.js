@@ -83,7 +83,11 @@ class AdminRepository {
 
     // Toggle snippet public status
     this.statements.toggleSnippetPublic = db.prepare(`
-      UPDATE snippets SET is_public = NOT is_public WHERE id = ?
+      UPDATE snippets
+      SET is_public = NOT is_public,
+          group_id = CASE WHEN is_public = 0 THEN NULL ELSE group_id END,
+          edit_permission = CASE WHEN is_public = 0 AND edit_permission = 'group' THEN 'owner' ELSE edit_permission END
+      WHERE id = ?
     `);
 
     // Delete API key
@@ -257,10 +261,12 @@ class AdminRepository {
       let query = `
         SELECT
           s.id, s.title, s.description, s.updated_at, s.is_public,
+          s.group_id, g.name as group_name,
           s.user_id, u.username,
           (SELECT COUNT(*) FROM fragments WHERE snippet_id = s.id) as fragment_count
         FROM snippets s
         LEFT JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_groups g ON s.group_id = g.id
         WHERE 1=1
       `;
 

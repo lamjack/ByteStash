@@ -11,7 +11,8 @@ import apiKeyRoutes from "./routes/apiKeyRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import mcpRoutes from "./routes/mcpRoutes.js";
-import { authenticateToken } from "./middleware/auth.js";
+import { authenticateToken, optionalAuthenticateToken } from "./middleware/auth.js";
+import groupRoutes from "./routes/groupRoutes.js";
 import { authenticateApiKey } from "./middleware/apiKeyAuth.js";
 import { authenticateMcp } from "./middleware/mcpAuth.js";
 import { requireAdmin } from "./middleware/adminAuth.js";
@@ -55,7 +56,8 @@ app.use(
   snippetRoutes
 );
 app.use(`${basePath}/api/share`, shareRoutes);
-app.use(`${basePath}/api/public/snippets`, publicRoutes);
+app.use(`${basePath}/api/public/snippets`, optionalAuthenticateToken, publicRoutes);
+app.use(`${basePath}/api/groups`, authenticateToken, groupRoutes);
 app.use(`${basePath}/api/embed`, embedRoutes);
 app.use(`${basePath}/api/admin`, authenticateToken, requireAdmin, adminRoutes);
 

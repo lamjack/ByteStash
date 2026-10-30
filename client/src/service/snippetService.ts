@@ -145,13 +145,16 @@ export const snippetService = {
     ).toString();
 
     return apiClient.get<any>(
-      `${API_ENDPOINTS.PUBLIC}${queryString ? '?' + queryString : ''}`
+      `${API_ENDPOINTS.PUBLIC}${queryString ? '?' + queryString : ''}`,
+      // Optional on this endpoint: signed-in users also get their groups' snippets
+      { requiresAuth: true }
     );
   },
 
   async getPublicSnippetsMetadata(): Promise<SnippetMetadata> {
     return apiClient.get<any>(
-      `${API_ENDPOINTS.PUBLIC}/metadata`
+      `${API_ENDPOINTS.PUBLIC}/metadata`,
+      { requiresAuth: true }
     );
   },
 };

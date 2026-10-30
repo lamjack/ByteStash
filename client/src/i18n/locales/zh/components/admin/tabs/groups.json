@@ -1,0 +1,60 @@
+{
+  "intro": "创建群组并添加成员。设为“仅群组”的片段只有该群组成员可以查看。可以通过用户名或邮箱添加成员；还没有账号的邮箱会成为邀请，即使关闭了注册，该邮箱也可以注册。",
+  "form": {
+    "name": "群组名称",
+    "description": "描述（可选）",
+    "create": "创建群组",
+    "save": "保存"
+  },
+  "columns": {
+    "name": "名称",
+    "members": "成员",
+    "invites_one": "{{count}} 个邀请",
+    "invites_other": "{{count}} 个邀请",
+    "snippets": "片段",
+    "created": "创建时间",
+    "actions": "操作"
+  },
+  "action": {
+    "members": "管理成员",
+    "edit": "编辑群组",
+    "delete": "删除群组"
+  },
+  "members": {
+    "title": "{{name}} 的成员",
+    "close": "关闭",
+    "add": "添加",
+    "addPlaceholder": "用户名或邮箱",
+    "addHint": "未注册的邮箱会保存为邀请，首次用 Google 登录时自动加入群组。",
+    "loading": "正在加载成员...",
+    "empty": "还没有成员",
+    "remove": "移出群组",
+    "cancelInvite": "取消邀请",
+    "pending": "已邀请",
+    "success": {
+      "added": "已将 {{username}} 加入群组",
+      "invited": "已邀请 {{email}}"
+    },
+    "error": {
+      "add": "添加成员失败",
+      "remove": "移除失败"
+    }
+  },
+  "success": {
+    "create": "群组已创建",
+    "update": "群组已更新",
+    "delete": "群组已删除"
+  },
+  "error": {
+    "save": "保存群组失败",
+    "delete": "删除群组失败"
+  },
+  "table": {
+    "emptyMessage": "还没有群组",
+    "loadingMessage": "正在加载群组..."
+  },
+  "confirmationModal": {
+    "title": "删除群组",
+    "message": "确定删除这个群组吗？其中的片段会变为作者私有。此操作无法撤销。"
+  }
+}
