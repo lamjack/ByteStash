@@ -16,6 +16,7 @@ import { up_v1_9_0_admin_fields } from "./migrations/20260124-admin-fields.js";
 import { up_v1_9_0_cascade_delete } from "./migrations/20260124-cascade-delete.js";
 import { up_v1_9_0_user_settings } from "./migrations/20260729-user-settings.js";
 import { up_v1_10_0_groups } from "./migrations/20261030-groups.js";
+import { up_v1_10_0_snippet_shares } from "./migrations/20261030-snippet-shares.js";
 import path from "path";
 let db = null;
 let checkpointInterval = null;
@@ -129,6 +130,7 @@ function initializeDatabase() {
       up_v1_9_0_cascade_delete(db);
       up_v1_9_0_user_settings(db);
       up_v1_10_0_groups(db);
+      up_v1_10_0_snippet_shares(db);
       Logger.debug("All migrations applied successfully");
     }
 

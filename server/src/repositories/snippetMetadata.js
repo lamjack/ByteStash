@@ -1,36 +1,40 @@
-// Matches snippets published to a group the viewer belongs to. Expects one bound param: the viewer id.
-export const GROUP_MEMBER_SQL =
-  "(s.is_public = 0 AND s.group_id IS NOT NULL AND s.group_id IN (SELECT group_id FROM user_group_members WHERE user_id = ?))";
-
-// Public listing: anonymous viewers see public snippets, signed-in viewers also see their groups' snippets.
-export const visibleToViewerSql = (viewerId = null) =>
-  viewerId != null ? `(s.is_public = 1 OR ${GROUP_MEMBER_SQL})` : "s.is_public = 1";
-
-// Group view: group-only snippets of the viewer's groups plus the viewer's own group-only snippets.
+// Snippets shared with the viewer, directly or through one of their groups.
 // Expects two bound params: the viewer id twice.
-export const GROUP_LISTING_SQL =
-  "(s.is_public = 0 AND s.group_id IS NOT NULL AND (s.user_id = ? OR s.group_id IN (SELECT group_id FROM user_group_members WHERE user_id = ?)))";
+export const SHARED_WITH_VIEWER_SQL = `(s.is_public = 0 AND EXISTS (
+  SELECT 1 FROM snippet_shares sh
+  WHERE sh.snippet_id = s.id
+    AND (sh.user_id = ? OR sh.group_id IN (SELECT group_id FROM user_group_members WHERE user_id = ?))
+))`;
 
-export const getCategoryFacets = (db, userId = null, viewerId = null, groupViewerId = null) => {
-  let sql = `
+// Shared view: snippets shared with the viewer plus the viewer's own shared snippets.
+// Expects three bound params: the viewer id three times.
+export const SHARED_LISTING_SQL = `((s.user_id = ? AND s.is_public = 0 AND EXISTS (
+  SELECT 1 FROM snippet_shares sh WHERE sh.snippet_id = s.id
+)) OR ${SHARED_WITH_VIEWER_SQL})`;
+
+/**
+ * The WHERE clause (and its params) for a listing scope: the owner's snippets (userId),
+ * the shared view (sharedViewerId), or public snippets plus those shared with viewerId.
+ */
+export function scopeFilter({ userId = null, viewerId = null, sharedViewerId = null } = {}) {
+  if (userId !== null) return { sql: "s.user_id = ?", params: [userId] };
+  if (sharedViewerId != null) {
+    return { sql: SHARED_LISTING_SQL, params: [sharedViewerId, sharedViewerId, sharedViewerId] };
+  }
+  if (viewerId != null) {
+    return { sql: `(s.is_public = 1 OR ${SHARED_WITH_VIEWER_SQL})`, params: [viewerId, viewerId] };
+  }
+  return { sql: "s.is_public = 1", params: [] };
+}
+
+export const getCategoryFacets = (db, userId = null, viewerId = null, sharedViewerId = null) => {
+  const scope = scopeFilter({ userId, viewerId, sharedViewerId });
+  const sql = `
     SELECT c.name AS value, COUNT(DISTINCT c.snippet_id) AS count
     FROM categories c
     INNER JOIN snippets s ON c.snippet_id = s.id
-    WHERE s.expiry_date IS NULL
+    WHERE s.expiry_date IS NULL AND ${scope.sql}
+    GROUP BY c.name ORDER BY c.name
   `;
-  const params = [];
-
-  if (userId !== null) {
-    sql += " AND s.user_id = ?";
-    params.push(userId);
-  } else if (groupViewerId != null) {
-    sql += ` AND ${GROUP_LISTING_SQL}`;
-    params.push(groupViewerId, groupViewerId);
-  } else {
-    sql += ` AND ${visibleToViewerSql(viewerId)}`;
-    if (viewerId != null) params.push(viewerId);
-  }
-
-  sql += " GROUP BY c.name ORDER BY c.name";
-  return db.prepare(sql).all(...params);
+  return db.prepare(sql).all(...scope.params);
 };
