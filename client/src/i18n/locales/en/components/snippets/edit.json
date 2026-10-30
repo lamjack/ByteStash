@@ -50,7 +50,7 @@
       },
       "editPermission": {
         "label": "Who can edit",
-        "locked": "This snippet is read-only. Choose another option to edit it.",
+        "locked": "This snippet is locked. Pick another option under \"Who can edit\" to edit it.",
         "groupNeedsGroup": "Available for group-only snippets",
         "options": {
           "owner": {
@@ -62,8 +62,8 @@
             "description": "Members of the selected group can edit the content. Only you can change sharing, edit permission or delete it."
           },
           "readonly": {
-            "label": "Read-only",
-            "description": "Locked: nobody can edit it, including you, until you choose another option."
+            "label": "Locked",
+            "description": "Locked: nobody can edit it, including you, until you pick another option."
           }
         }
       },

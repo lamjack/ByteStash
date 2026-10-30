@@ -209,7 +209,7 @@ class SnippetService {
         const visibility = resolveVisibility(snippetData, { userId, isAdmin, existing });
         const editPermission = resolveEditPermission(snippetData, { ...visibility, existing });
         if (existing.edit_permission === "readonly" && editPermission === "readonly") {
-          throw new VisibilityError("This snippet is read-only. Change its edit permission to edit it.", 409);
+          throw new VisibilityError("This snippet is locked. Change its edit permission to edit it.", 409);
         }
         settings = { ...visibility, editPermission };
       } else if (canEditSnippet(existing, userId)) {
@@ -307,7 +307,7 @@ class SnippetService {
     }
   }
 
-  async getSnippetsPaginated({ userId, viewerId = null, filters, sort, limit, offset }) {
+  async getSnippetsPaginated({ userId, viewerId = null, groupViewerId = null, filters, sort, limit, offset }) {
     try {
       Logger.debug(
         "Service: Getting paginated snippets for user:",
@@ -324,6 +324,7 @@ class SnippetService {
       const result = await snippetRepository.findAllPaginated({
         userId,
         viewerId,
+        groupViewerId,
         filters,
         sort,
         limit,
@@ -339,13 +340,13 @@ class SnippetService {
     }
   }
 
-  async getMetadata(userId = null, viewerId = null) {
+  async getMetadata(userId = null, viewerId = null, groupViewerId = null) {
     try {
       Logger.debug(
         "Service: Getting metadata for",
         userId !== null ? `user: ${userId}` : "public snippets"
       );
-      const result = await snippetRepository.getMetadata(userId, viewerId);
+      const result = await snippetRepository.getMetadata(userId, viewerId, groupViewerId);
       Logger.debug(
         `Service: Retrieved ${result.categories.length} categories, ${result.languages.length} languages`
       );

@@ -2,7 +2,8 @@ export const API_ENDPOINTS = {
   AUTH: '/api/auth',
   SNIPPETS: '/api/snippets',
   SHARE: '/api/share',
-  PUBLIC: '/api/public/snippets'
+  PUBLIC: '/api/public/snippets',
+  GROUP_SNIPPETS: '/api/groups/snippets'
 } as const;
 
 export const API_METHODS = {

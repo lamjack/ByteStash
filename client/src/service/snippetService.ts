@@ -145,16 +145,38 @@ export const snippetService = {
     ).toString();
 
     return apiClient.get<any>(
-      `${API_ENDPOINTS.PUBLIC}${queryString ? '?' + queryString : ''}`,
-      // Optional on this endpoint: signed-in users also get their groups' snippets
+      `${API_ENDPOINTS.PUBLIC}${queryString ? '?' + queryString : ''}`
+    );
+  },
+
+  async getGroupSnippetsPaginated(params: Record<string, string | number | boolean | undefined>): Promise<{
+    data: Snippet[];
+    pagination: {
+      total: number;
+      offset: number;
+      limit: number;
+      hasMore: boolean;
+    };
+  }> {
+    const queryString = new URLSearchParams(
+      Object.entries(params)
+        .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => [k, String(v)])
+    ).toString();
+
+    return apiClient.get<any>(
+      `${API_ENDPOINTS.GROUP_SNIPPETS}${queryString ? '?' + queryString : ''}`,
       { requiresAuth: true }
     );
   },
 
+  async getGroupSnippetsMetadata(): Promise<SnippetMetadata> {
+    return apiClient.get<any>(`${API_ENDPOINTS.GROUP_SNIPPETS}/metadata`, { requiresAuth: true });
+  },
+
   async getPublicSnippetsMetadata(): Promise<SnippetMetadata> {
     return apiClient.get<any>(
-      `${API_ENDPOINTS.PUBLIC}/metadata`,
-      { requiresAuth: true }
+      `${API_ENDPOINTS.PUBLIC}/metadata`
     );
   },
 };

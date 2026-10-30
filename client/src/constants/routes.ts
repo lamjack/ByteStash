@@ -6,6 +6,7 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   PUBLIC_SNIPPETS: '/public/snippets',
+  GROUP_SNIPPETS: '/group/snippets',
   AUTH_CALLBACK: '/auth/callback',
   LOGOUT_CALLBACK: '/auth/logout_callback',
   EMBED: '/embed/:shareId',
