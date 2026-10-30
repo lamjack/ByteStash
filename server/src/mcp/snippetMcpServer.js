@@ -2,13 +2,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import snippetService from '../services/snippetService.js';
 import Logger from '../logger.js';
+import groupRepository from '../repositories/groupRepository.js';
 
 /*
  * Builds an MCP server instance scoped to a single authenticated ByteStash user.
  *
- * Every tool operates only on snippets owned by `userId` (the same authorization
- * boundary the REST API enforces), so an API key never grants access beyond what
- * that key's owner could already see through the web UI or REST API.
+ * Tools apply the same authorization as the REST API: writes only touch snippets owned
+ * by `userId`, and reads also reach public snippets and group-only snippets of groups
+ * the user belongs to. An API key never grants access beyond what its owner could
+ * already see through the web UI or REST API.
  *
  * A fresh server is created per request (stateless Streamable HTTP transport), so the
  * userId is safely captured in the tool closures with no cross-request leakage.
@@ -26,6 +28,9 @@ function summarizeSnippet(snippet) {
     title: snippet.title,
     description: snippet.description,
     categories: snippet.categories,
+    visibility: snippet.visibility,
+    group: snippet.group_id ? { id: snippet.group_id, name: snippet.group_name } : null,
+    owner: snippet.username,
     is_public: !!snippet.is_public,
     is_favorite: !!snippet.is_favorite,
     is_pinned: !!snippet.is_pinned,
@@ -43,6 +48,9 @@ function fullSnippet(snippet) {
     title: snippet.title,
     description: snippet.description,
     categories: snippet.categories,
+    visibility: snippet.visibility,
+    group: snippet.group_id ? { id: snippet.group_id, name: snippet.group_name } : null,
+    owner: snippet.username,
     is_public: !!snippet.is_public,
     is_favorite: !!snippet.is_favorite,
     is_pinned: !!snippet.is_pinned,
@@ -57,6 +65,15 @@ function fullSnippet(snippet) {
   };
 }
 
+const visibilitySchema = z
+  .enum(['private', 'public', 'protected'])
+  .describe('private: only you; public: anyone; protected: members of group_id only (see list_groups)');
+
+// Visibility errors (e.g. publishing to a group you are not in) are safe to show the client.
+function errorMessage(error, fallback) {
+  return error?.status === 400 ? error.message : fallback;
+}
+
 function ok(data) {
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 }
@@ -65,13 +82,14 @@ function fail(message) {
   return { content: [{ type: 'text', text: message }], isError: true };
 }
 
-export function createMcpServer(userId) {
+export function createMcpServer(userId, { isAdmin = false } = {}) {
   const server = new McpServer(
     { name: 'bytestash', version: '1.0.0' },
     {
       instructions:
         'ByteStash is a code-snippet manager. Use these tools to search, read, create, ' +
-        'update and delete the authenticated user\'s code snippets. Each snippet has a title, ' +
+        'update and delete the authenticated user\'s code snippets, and to read snippets shared ' +
+        'with them (public, or group-only for their groups). Each snippet has a title, ' +
         'description, categories (tags), and one or more file "fragments" (each with a file name, ' +
         'language and code). Start with list_snippets or list_metadata to discover what exists.',
     }
@@ -85,6 +103,10 @@ export function createMcpServer(userId) {
         'List the user\'s code snippets with optional full-text search and filtering. ' +
         'Returns a summary (no code bodies) plus pagination info. Use get_snippet to read the code.',
       inputSchema: {
+        scope: z
+          .enum(['mine', 'shared'])
+          .optional()
+          .describe('mine (default): your own snippets; shared: public snippets plus group-only snippets of your groups'),
         search: z.string().optional().describe('Free-text search over title, description and (by default) code'),
         searchCode: z.boolean().optional().describe('Whether search also matches code content (default true)'),
         language: z.string().optional().describe('Only snippets containing a fragment in this language'),
@@ -100,8 +122,10 @@ export function createMcpServer(userId) {
       try {
         const limit = args.limit ?? 50;
         const offset = args.offset ?? 0;
+        const shared = args.scope === 'shared';
         const { snippets, total } = await snippetService.getSnippetsPaginated({
-          userId,
+          userId: shared ? null : userId,
+          viewerId: shared ? userId : null,
           filters: {
             search: args.search || null,
             searchCode: args.searchCode !== false,
@@ -109,8 +133,9 @@ export function createMcpServer(userId) {
             categories: args.categories && args.categories.length
               ? args.categories.map((c) => c.trim().toLowerCase())
               : null,
-            favorites: !!args.favorites,
-            pinned: !!args.pinned,
+            // Favorite/pinned flags belong to the owner, so they only filter your own snippets
+            favorites: !shared && !!args.favorites,
+            pinned: !shared && !!args.pinned,
             recycled: false,
           },
           sort: args.sort || 'newest',
@@ -162,7 +187,9 @@ export function createMcpServer(userId) {
         description: z.string().optional().describe('Markdown description'),
         categories: z.array(z.string()).optional().describe('Category/tag names'),
         fragments: z.array(fragmentInputSchema).min(1).describe('One or more code files'),
-        is_public: z.boolean().optional().describe('Whether the snippet is publicly visible (default false)'),
+        is_public: z.boolean().optional().describe('Deprecated, use visibility. Whether the snippet is publicly visible (default false)'),
+        visibility: visibilitySchema.optional(),
+        group_id: z.coerce.number().int().optional().describe('Group id, required when visibility is protected'),
       },
     },
     async (args) => {
@@ -179,13 +206,16 @@ export function createMcpServer(userId) {
               position: i,
             })),
             is_public: args.is_public ? 1 : 0,
+            visibility: args.visibility,
+            group_id: args.group_id,
           },
-          userId
+          userId,
+          { isAdmin }
         );
         return ok(fullSnippet(created));
       } catch (error) {
         Logger.error('MCP create_snippet failed:', error);
-        return fail('Failed to create snippet');
+        return fail(errorMessage(error, 'Failed to create snippet'));
       }
     }
   );
@@ -203,15 +233,23 @@ export function createMcpServer(userId) {
         description: z.string().optional().describe('New markdown description'),
         categories: z.array(z.string()).optional().describe('Replacement set of category/tag names'),
         fragments: z.array(fragmentInputSchema).min(1).optional().describe('Replacement set of code files'),
-        is_public: z.boolean().optional().describe('New public visibility'),
+        is_public: z.boolean().optional().describe('Deprecated, use visibility. New public visibility'),
+        visibility: visibilitySchema.optional(),
+        group_id: z.coerce.number().int().optional().describe('Group id, required when visibility is protected'),
       },
     },
     async (args) => {
       try {
         const existing = await snippetService.findById(args.id, userId);
-        if (!existing) {
-          return fail(`Snippet ${args.id} not found`);
+        if (!existing || existing.user_id !== userId) {
+          return fail(`Snippet ${args.id} not found or not owned by you`);
         }
+
+        let visibility = args.visibility;
+        if (!visibility && args.is_public !== undefined) {
+          visibility = args.is_public ? 'public' : 'private';
+        }
+        visibility = visibility ?? existing.visibility;
 
         const fragments = args.fragments
           ? args.fragments.map((f, i) => ({
@@ -229,11 +267,11 @@ export function createMcpServer(userId) {
             description: args.description ?? existing.description,
             categories: args.categories ?? existing.categories,
             fragments,
-            is_public: (args.is_public ?? !!existing.is_public) ? 1 : 0,
-            // Keep a group-only snippet in its group unless it is being made public
-            group_id: args.is_public ? null : existing.group_id ?? null,
+            visibility,
+            group_id: args.group_id ?? existing.group_id ?? null,
           },
-          userId
+          userId,
+          { isAdmin }
         );
 
         if (!updated) {
@@ -242,7 +280,7 @@ export function createMcpServer(userId) {
         return ok(fullSnippet(updated));
       } catch (error) {
         Logger.error('MCP update_snippet failed:', error);
-        return fail('Failed to update snippet');
+        return fail(errorMessage(error, 'Failed to update snippet'));
       }
     }
   );
@@ -276,6 +314,26 @@ export function createMcpServer(userId) {
       } catch (error) {
         Logger.error('MCP delete_snippet failed:', error);
         return fail('Failed to delete snippet');
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_groups',
+    {
+      title: 'List groups',
+      description: 'List the groups you can publish group-only (protected) snippets to.',
+      inputSchema: {},
+    },
+    async () => {
+      try {
+        const groups = isAdmin
+          ? groupRepository.findAll().map(({ id, name, description }) => ({ id, name, description }))
+          : groupRepository.findForUser(userId);
+        return ok(groups);
+      } catch (error) {
+        Logger.error('MCP list_groups failed:', error);
+        return fail('Failed to list groups');
       }
     }
   );

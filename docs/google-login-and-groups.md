@@ -37,3 +37,12 @@ Admins manage groups under **Admin → Groups**: create, rename or delete a grou
 - Group members see group-only snippets on the **Public** page next to public snippets, once signed in.
 - Adding an email that has no account yet creates an **invite**. That person may sign in with Google even while registration is closed, and joins the group on first sign-in (the email must be verified by the provider).
 - Deleting a group turns its snippets back to private.
+
+## MCP
+
+The MCP endpoint (`/mcp`, authenticated with an API key) follows the same rules:
+
+- `list_snippets` takes `scope: "shared"` to list public snippets plus your groups' snippets (default `"mine"`).
+- `create_snippet` / `update_snippet` take `visibility` (`private`, `public`, `protected`) and `group_id`; `is_public` still works.
+- `list_groups` lists the groups you can publish to (all groups for admins).
+- `update_snippet` and `delete_snippet` only work on your own snippets.

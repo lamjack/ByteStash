@@ -352,7 +352,8 @@ class SnippetRepository {
       const db = getDb();
 
       return db.transaction(() => {
-        this.updateSnippetStmt.run(
+        // Readers of public/group snippets reach here too; only the owner may write.
+        const result = this.updateSnippetStmt.run(
           title,
           description,
           isPublic ? 1 : 0,
@@ -360,6 +361,7 @@ class SnippetRepository {
           id,
           userId
         );
+        if (result.changes === 0) return null;
 
         this.deleteFragmentsStmt.run(id, userId);
         fragments.forEach((fragment, index) => {
