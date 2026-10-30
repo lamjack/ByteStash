@@ -33,6 +33,11 @@ DOCKER_FILE_PATH ?= $(ROOT_DIR)/Dockerfile
 DOCKER_BUILD_ARGS ?=
 DOCKER := docker --config $(DOCKER_CONFIG_PATH)
 
+# --config drops the current context, so pin DOCKER_HOST to the active
+# context's endpoint or docker falls back to /var/run/docker.sock.
+DOCKER_HOST ?= $(shell docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)
+export DOCKER_HOST
+
 .PHONY: help
 
 ##@ General
