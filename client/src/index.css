@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default palette; named color themes override these at runtime. */
+  --color-light-bg: 241 245 249; /* #f1f5f9 */
+  --color-light-surface: 226 232 240; /* #e2e8f0 */
+  --color-light-border: 203 213 225; /* #cbd5e1 */
+  --color-light-text: 30 41 59; /* #1e293b */
+  --color-light-text-secondary: 71 85 105; /* #475569 */
+  --color-light-primary: 37 99 235; /* #2563eb */
+  --color-light-hover: 203 213 225; /* #cbd5e1 */
+  --color-light-hover-more: 239 242 246; /* #eff2f6 */
+  --color-dark-bg: 15 23 42; /* #0f172a */
+  --color-dark-surface: 30 41 59; /* #1e293b */
+  --color-dark-border: 51 65 85; /* #334155 */
+  --color-dark-text: 226 232 240; /* #e2e8f0 */
+  --color-dark-text-secondary: 148 163 184; /* #94a3b8 */
+  --color-dark-primary: 37 99 235; /* #2563eb */
+  --color-dark-hover: 51 65 85; /* #334155 */
+  --color-dark-hover-more: 77 98 128; /* #4d6280 */
+}
+
 body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,

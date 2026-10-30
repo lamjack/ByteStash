@@ -38,6 +38,7 @@
         "title": "検索"
       },
       "theme": {
+        "developer": "開発者向けテーマ",
         "title": "テーマ"
       },
       "view": {

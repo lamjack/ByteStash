@@ -9,6 +9,7 @@ import {
   EDITOR_TEXT,
   MONACO_THEME,
 } from "../editor/editorTheme";
+import { COLOR_THEMES, monacoThemeName } from "../../themes/colorThemes";
 import { 
   FileJson, 
   FileText, 
@@ -658,6 +659,51 @@ export const configureMonaco = () => {
       "editorGutter.background": EDITOR_SURFACE.light,
     },
   });
+
+  for (const theme of Object.values(COLOR_THEMES)) {
+    const hex = (color: string) => color.replace("#", "");
+    const { syntax, editor } = theme;
+    monaco.editor.defineTheme(monacoThemeName(theme.id), {
+      base: theme.base === "dark" ? "vs-dark" : "vs",
+      inherit: true,
+      rules: [
+        { token: "", foreground: hex(theme.ui.text) },
+        { token: "comment", foreground: hex(syntax.comment), fontStyle: "italic" },
+        { token: "keyword", foreground: hex(syntax.keyword) },
+        { token: "string", foreground: hex(syntax.string) },
+        { token: "number", foreground: hex(syntax.number) },
+        { token: "regexp", foreground: hex(syntax.regexp) },
+        { token: "type", foreground: hex(syntax.type) },
+        { token: "class", foreground: hex(syntax.type) },
+        { token: "function", foreground: hex(syntax.function) },
+        { token: "variable", foreground: hex(syntax.variable) },
+        { token: "constant", foreground: hex(syntax.constant) },
+        { token: "parameter", foreground: hex(syntax.variable) },
+        { token: "builtin", foreground: hex(syntax.type) },
+        { token: "operator", foreground: hex(syntax.operator) },
+        { token: "delimiter", foreground: hex(syntax.punctuation) },
+        { token: "tag", foreground: hex(syntax.tag) },
+        { token: "attribute.name", foreground: hex(syntax.attribute) },
+        { token: "attribute.value", foreground: hex(syntax.string) },
+        { token: "metatag", foreground: hex(syntax.tag) },
+        { token: "key", foreground: hex(syntax.attribute) },
+        { token: "string.key.json", foreground: hex(syntax.attribute) },
+        { token: "string.value.json", foreground: hex(syntax.string) },
+      ],
+      colors: {
+        "editor.background": editor.surface,
+        "editor.foreground": theme.ui.text,
+        "editor.lineHighlightBackground": editor.lineHighlight,
+        "editorLineNumber.foreground": editor.lineNumber,
+        "editorLineNumber.activeForeground": editor.activeLineNumber,
+        "editorGutter.background": editor.surface,
+        "editor.selectionBackground": editor.selection,
+        "editorCursor.foreground": theme.ui.text,
+        "editorWidget.background": theme.ui.surface,
+        "editorWidget.border": theme.ui.border,
+      },
+    });
+  }
 };
 
 export const initializeMonaco = () => {

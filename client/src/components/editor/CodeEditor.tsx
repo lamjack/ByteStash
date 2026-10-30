@@ -26,33 +26,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const monacoLanguage = getMonacoLanguage(language);
   const [editorHeight, setEditorHeight] = useState<string>(minHeight);
-  const { theme } = useTheme();
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(
-    theme === 'system' 
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      : theme
-  );
-  
-  useEffect(() => {
-    const updateEffectiveTheme = () => {
-      if (theme === 'system') {
-        setEffectiveTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      } else {
-        setEffectiveTheme(theme);
-      }
-    };
-
-    updateEffectiveTheme();
-
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      mediaQuery.addEventListener('change', updateEffectiveTheme);
-      return () => mediaQuery.removeEventListener('change', updateEffectiveTheme);
-    }
-  }, [theme]);
+  const { effectiveTheme, colorTheme } = useTheme();
 
   const isDark = effectiveTheme === 'dark';
-  const palette = editorPalette(isDark);
+  const palette = editorPalette(isDark, colorTheme);
 
   useEffect(() => {
     if (editorRef.current) {

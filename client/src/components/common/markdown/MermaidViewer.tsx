@@ -26,33 +26,13 @@ async function loadAndInitMermaid(theme: 'light' | 'dark') {
 
 export const MermaidViewer: React.FC<MermaidViewerProps> = ({ code }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
+  const { effectiveTheme } = useTheme();
   const { t } = useTranslation('components/common/markdown');
   const [svgContent, setSvgContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">(
-    theme === "system"
-      ? (typeof window !== 'undefined' && window.matchMedia("(prefers-color-scheme: dark)").matches)
-        ? "dark"
-        : "light"
-      : theme as "light" | "dark"
-  );
-
-  useEffect(() => {
-    if (theme === "system") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = () => {
-        setEffectiveTheme(mediaQuery.matches ? "dark" : "light");
-      };
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
-    } else {
-      setEffectiveTheme(theme as "light" | "dark");
-    }
-  }, [theme]);
 
   useEffect(() => {
     let isMounted = true;

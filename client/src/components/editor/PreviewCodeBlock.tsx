@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import MarkdownRenderer from "../common/markdown/MarkdownRenderer";
 import Editor from "@monaco-editor/react";
 import {
@@ -31,40 +31,10 @@ export const PreviewCodeBlock: React.FC<PreviewCodeBlockProps> = ({
   snippetId,
   fragmentId,
 }) => {
-  const { theme } = useTheme();
-  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">(
-    theme === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : theme
-  );
-
-  useEffect(() => {
-    const updateEffectiveTheme = () => {
-      if (theme === "system") {
-        setEffectiveTheme(
-          window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light"
-        );
-      } else {
-        setEffectiveTheme(theme);
-      }
-    };
-
-    updateEffectiveTheme();
-
-    if (theme === "system") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      mediaQuery.addEventListener("change", updateEffectiveTheme);
-      return () =>
-        mediaQuery.removeEventListener("change", updateEffectiveTheme);
-    }
-  }, [theme]);
+  const { effectiveTheme, colorTheme } = useTheme();
 
   const isDark = effectiveTheme === "dark";
-  const palette = editorPalette(isDark);
+  const palette = editorPalette(isDark, colorTheme);
   const isMarkdown = getLanguageLabel(language) === "markdown";
   const LINE_HEIGHT = 19;
   const visibleHeight = (previewLines + 2) * LINE_HEIGHT;

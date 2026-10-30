@@ -1,6 +1,7 @@
 import { Locale } from '../i18n/types';
+import { COLOR_THEME_IDS, ColorThemeId } from '../themes/colorThemes';
 
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark' | 'system' | ColorThemeId;
 export type ViewMode = 'grid' | 'list';
 
 export interface UserSettings {
@@ -36,14 +37,17 @@ export interface UserSettingsResponse {
   updatedAt: string | null;
 }
 
-const THEMES: Theme[] = ['light', 'dark', 'system'];
+export const THEMES: Theme[] = ['light', 'dark', 'system', ...COLOR_THEME_IDS];
+
+export const isTheme = (value: unknown): value is Theme =>
+  typeof value === 'string' && THEMES.includes(value as Theme);
 const VIEW_MODES: ViewMode[] = ['grid', 'list'];
 const LOCALES = Object.values(Locale) as string[];
 
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 const validators: { [K in keyof UserSettings]: (value: unknown) => boolean } = {
-  theme: (value) => typeof value === 'string' && THEMES.includes(value as Theme),
+  theme: isTheme,
   locale: (value) => typeof value === 'string' && LOCALES.includes(value),
   viewMode: (value) => typeof value === 'string' && VIEW_MODES.includes(value as ViewMode),
   compactView: isBoolean,

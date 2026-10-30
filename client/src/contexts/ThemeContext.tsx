@@ -1,57 +1,80 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-type Theme = 'light' | 'dark' | 'system';
+import { Theme, isTheme } from '../types/settings';
+import { ColorTheme, colorThemeCssVariables, getColorTheme } from '../themes/colorThemes';
 
 interface ThemeContextType {
   theme: Theme;
+  /** Whether the UI currently renders in light or dark mode. */
+  effectiveTheme: 'light' | 'dark';
+  /** The selected named color theme, or null for the default palette. */
+  colorTheme: ColorTheme | null;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const prefersDark = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const resolveEffectiveTheme = (theme: Theme): 'light' | 'dark' => {
+  const colorTheme = getColorTheme(theme);
+  if (colorTheme) return colorTheme.base;
+  if (theme === 'system') return prefersDark() ? 'dark' : 'light';
+  return theme === 'dark' ? 'dark' : 'light';
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
-      return savedTheme;
-    }
-    return 'system';
+    return isTheme(savedTheme) ? savedTheme : 'system';
   });
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() =>
+    resolveEffectiveTheme(theme)
+  );
+  const colorTheme = getColorTheme(theme);
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    const effectiveTheme = theme === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      : theme;
-      
-    if (effectiveTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    setEffectiveTheme(resolveEffectiveTheme(theme));
     localStorage.setItem('theme', theme);
-  }, [theme]);
 
-  useEffect(() => {
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => {
-        const root = window.document.documentElement;
-        if (mediaQuery.matches) {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
-      };
+      const handleChange = () => setEffectiveTheme(mediaQuery.matches ? 'dark' : 'light');
 
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
   }, [theme]);
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.toggle('dark', effectiveTheme === 'dark');
+    root.style.colorScheme = effectiveTheme;
+  }, [effectiveTheme]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (!colorTheme) {
+      delete root.dataset.colorTheme;
+      return;
+    }
+
+    const variables = colorThemeCssVariables(colorTheme);
+    for (const [name, value] of Object.entries(variables)) {
+      root.style.setProperty(name, value);
+    }
+    root.dataset.colorTheme = colorTheme.id;
+
+    return () => {
+      for (const name of Object.keys(variables)) {
+        root.style.removeProperty(name);
+      }
+    };
+  }, [colorTheme]);
+
   const toggleTheme = () => {
-    setThemeState(prev => prev === 'light' ? 'dark' : 'light');
+    setThemeState(prev => resolveEffectiveTheme(prev) === 'dark' ? 'light' : 'dark');
   };
 
   const setTheme = (newTheme: Theme) => {
@@ -59,7 +82,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, effectiveTheme, colorTheme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
